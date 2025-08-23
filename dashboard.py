@@ -161,12 +161,13 @@ def generate_sample_data(user_id):
                     heart_rate = random.randint(60, 100)
                     temperature = round(random.uniform(36.0, 37.5), 1)
                     glucose = random.randint(80, 120)
-                    water_balance = random.randint(35, 65)
+                    water_balance = random.randint(1, 10)
                     general_health = random.randint(50, 80)
+                    
                     
                     cursor.execute("""
                     INSERT INTO vital_signs (user_id, date_recorded, systolic_bp, diastolic_bp, 
-                    heart_rate, temperature, glucode, water_balance, general_health)
+                    heart_rate, temperature, glucode, water_balance, general_health, water_glasses)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, (user_id, date_record, systolic, diastolic, heart_rate, temperature, 
                          glucose, water_balance, general_health))
@@ -278,10 +279,6 @@ def load_dashboard_css():
         margin: 0 0 1rem 0;
     }
     
-    
-    
-    
-    
     /* Metrics grid */
     .metrics-grid {
         display: grid;
@@ -320,6 +317,10 @@ def load_dashboard_css():
         border-left: 4px solid #eab308;
     }
     
+    .metric-card.water {
+        border-left: 4px solid #262657;
+    }
+                
     .metric-header {
         display: flex;
         align-items: center;
@@ -338,133 +339,18 @@ def load_dashboard_css():
         margin: 0;
     }
     
-    
-    
     .metric-value {
         font-size: 1.75rem;
         font-weight: 600;
         color: #1e293b;
         margin: 0.25rem 0;
     }
-    
-    
+
     
     .metric-subtitle {
         color: #64748b;
         font-size: 0.8rem;
         margin: 0;
-    }
-    
-    
-    
-    /* Bottom section */
-    .bottom-section {
-        display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: 2rem;
-    }
-    
-    .health-metrics {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-    }
-    
-    .circular-metric {
-        background: white;
-        border-radius: 16px;
-        padding: 2rem;
-        text-align: center;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e2e8f0;
-    }
-    
-    .circular-progress {
-        width: 120px;
-        height: 120px;
-        margin: 0 auto 1rem;
-        position: relative;
-    }
-    
-    .circular-progress svg {
-        transform: rotate(-90deg);
-    }
-    
-    .circular-progress .progress-bg {
-        fill: none;
-        stroke: #e2e8f0;
-        stroke-width: 8;
-    }
-    
-    .circular-progress .progress-fill {
-        fill: none;
-        stroke-width: 8;
-        stroke-linecap: round;
-        transition: stroke-dashoffset 0.5s ease;
-    }
-    
-    .water-balance .progress-fill {
-        stroke: #06b6d4;
-    }
-    
-    .general-health .progress-fill {
-        stroke: #eab308;
-    }
-    
-    .circular-value {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: #1e293b;
-    }
-    
-    .circular-title {
-        color: #64748b;
-        font-size: 1rem;
-        font-weight: 500;
-        margin: 0;
-    }
-    
-    .circular-subtitle {
-        color: #94a3b8;
-        font-size: 0.8rem;
-        margin: 0.25rem 0 0 0;
-    }
-    
-    /* Chart section */
-    .chart-section {
-        background: white;
-        border-radius: 16px;
-        padding: 2rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e2e8f0;
-    }
-    
-    .chart-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-    }
-    
-    .chart-title {
-        color: #1e293b;
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin: 0;
-    }
-    
-    .chart-period {
-        background: #f1f5f9;
-        color: #475569;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        border: none;
-        font-size: 0.9rem;
-        cursor: pointer;
     }
     
     /* Profile section */
@@ -530,20 +416,6 @@ def load_dashboard_css():
     """, unsafe_allow_html=True)
 
 
-def create_circular_progress(percentage, color="#06b6d4"):
-    """Create SVG circular progress indicator"""
-    radius = 54
-    circumference = 2 * 3.14159 * radius
-    offset = circumference - (percentage / 100) * circumference
-    
-    return f"""
-    <svg width="120" height="120">
-        <circle cx="60" cy="60" r="{radius}" class="progress-bg"></circle>
-        <circle cx="60" cy="60" r="{radius}" class="progress-fill" 
-                style="stroke: {color}; stroke-dasharray: {circumference}; stroke-dashoffset: {offset};"></circle>
-    </svg>
-    """
-
 def dashboard_sidebar():
     """Create dashboard sidebar"""
     st.image("Logo.png",  use_container_width=True)
@@ -592,7 +464,7 @@ def dashboard_main():
     if vital_signs:
         systolic_bp, diastolic_bp, heart_rate, temperature, glucode, water_balance, general_health = vital_signs
     else:
-        systolic_bp, diastolic_bp, heart_rate, temperature, glucode, water_balance, general_health = 120, 80, 75, 36.8, 95, 42, 61
+        systolic_bp, diastolic_bp, heart_rate, temperature, glucode, water_balance, general_health = 120, 80, 75, 36.8, 95, 3, 61
     
     # Header section
     st.markdown(f"""
@@ -628,7 +500,7 @@ def dashboard_main():
                 <div class="metric-icon">🌡️</div>
                 <h3 class="metric-title">Temperature</h3>
             </div>
-            <div class="metric-value">{temperature}Â°C</div>
+            <div class="metric-value">{temperature}°C</div>
             <p class="metric-subtitle">Temperature is the body's ability to generate heat</p>
         </div>
         """, unsafe_allow_html=True)
@@ -663,27 +535,14 @@ def dashboard_main():
     col_left, col_right = st.columns([1, 2])
     
     with col_left:
-        # Water balance circular progress
         st.markdown(f"""
-        <div class="circular-metric water-balance">
-            <div class="circular-progress">
-                {create_circular_progress(water_balance, "#06b6d4")}
-                <div class="circular-value">{water_balance}%</div>
+        <div class="metric-card water">
+            <div class="metric-header">
+                <div class="metric-icon">🥛</div>
+                <h3 class="metric-title">Water Balance</h3>
             </div>
-            <h3 class="circular-title">Water balance</h3>
-            <p class="circular-subtitle">The body's water balance</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # General health circular progress
-        st.markdown(f"""
-        <div class="circular-metric general-health">
-            <div class="circular-progress">
-                {create_circular_progress(general_health, "#eab308")}
-                <div class="circular-value">{general_health}%</div>
-            </div>
-            <h3 class="circular-title">General Health</h3>
-            <p class="circular-subtitle">Comprehensive health</p>
+            <div class="metric-value"><small> you have had</small> {water_balance} <small>glasses of water today!</small></div>
+            <p class="metric-subtitle">Drinking enough water boosts your energy and helps your heart stay healthy!</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -721,7 +580,7 @@ def dashboard_main():
 def run_dashboard():
     """Main function to run the dashboard"""
     st.set_page_config(
-        page_title="HealthCare Dashboard",
+        page_title="Dashboard",
         page_icon="🏥",
         layout="wide",
         initial_sidebar_state="expanded"

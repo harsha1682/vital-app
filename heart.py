@@ -410,7 +410,7 @@ def load_heart_css():
     }
     
     .stButton > button:focus {
-        background: linear-gradient(135deg, #1F5675, #44A08D) !important; 
+        background: linear-gradient(135deg, #2196f3 , #44A08D) !important; 
         color: white !important;                  
         border-color: #1F5675 !important;         
         box-shadow: 0 2px 8px rgba(31, 86, 117, 0.3) !important;
@@ -523,7 +523,7 @@ def heart_history_tab():
         
         col1,col2,col3=st.columns([1,2,2])
         with col1:
-            selected_date = st.selectbox(" ",date_options, index=0)
+            selected_date = st.selectbox("Choose date",date_options, index=0)
 
         filtered_results = [r for r in results_history if r[4] == selected_date]
 
@@ -604,6 +604,7 @@ def heart_diagnosis_tab():
     with col1:
         blood_status = st.text_input("Blood Status (e.g., 120/80)", placeholder="Enter blood pressure", key="diag_blood_status")
         heart_rate = st.number_input("Heart Rate (BPM)", min_value=40, max_value=200, value=75, key="diag_heart_rate")
+        water_balance = st.number_input("How many glasses of water have you drank today?", min_value=1, max_value=50)
     
     with col2:
         blood_count = st.text_input("Blood Count Range", placeholder="e.g., 79-92", key="diag_blood_count")
@@ -616,14 +617,14 @@ def heart_diagnosis_tab():
     col1, col2, col3 = st.columns([1, 2, 2])
     with col1:
         if st.button("Save", key="submit_diagnosis", use_container_width=True):
-            if blood_status and heart_rate and blood_count and glucose_level and temperature:
+            if blood_status and heart_rate and water_balance and blood_count and glucose_level and temperature:
                 # Save results
                 if save_heart_results(st.session_state.user_id, blood_status, heart_rate, blood_count, glucose_level):
                     st.balloons()
                 else:
-                    st.error("âŒ Failed to save results")
+                    st.error("Failed to save results")
             else:
-                st.error("âŒ Please fill in all required fields")
+                st.error(" Please fill in all required fields")
     
     st.markdown('</div>', unsafe_allow_html=True)
 

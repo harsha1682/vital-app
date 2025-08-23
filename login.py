@@ -3,6 +3,7 @@ import mysql.connector #type: ignore
 from mysql.connector import Error #type: ignore
 import hashlib
 import base64
+import time
 
 from pathlib import Path
 
@@ -253,37 +254,6 @@ def load_medical_css():
     """, unsafe_allow_html=True)
 
 
-
-def redirect_to_dashboard():
-    """Redirect to dashboard after successful login"""
-    st.success("🎉 Login successful!Redirecting")
-    st.balloons()
-    
-    # Add a small delay for user feedback
-    import time
-    time.sleep(1)
-    
-    # Try to import and run dashboard
-    try:
-        # Import dashboard module
-        import dashboard as dash
-        
-        # Clear the current page and run dashboard
-        st.rerun()
-        
-        # Run dashboard
-        dash.run_dashboard()
-        
-    except ImportError:
-        st.error("Dashboard module not found. Please ensure 'dashboard.py' is in the same directory.")
-        st.info("Creating dashboard connection...")
-        
-        # Alternative: Set a flag to show dashboard content
-        st.session_state.show_dashboard = True
-        st.rerun()
-
-
-
 def login_page():
     """Login page UI"""
     col1, col2, col3 = st.columns([0.5, 0.2, 1], gap="large")
@@ -307,7 +277,9 @@ def login_page():
                         st.success("Login successful! Redirecting...")
                         st.balloons()
                         # Here you would redirect to main dashboard
-                        st.write("🎉 Welcome to your dashboard!")
+                        time.sleep(1)
+                        #rerun app
+                        st.rerun()
                     else:
                         st.error("❌ Invalid email or password")
                 else:
@@ -315,7 +287,7 @@ def login_page():
         
             # Switch to signup link
             st.markdown("---")
-            col_link1, col_link2, col_link3 = st.columns([0.5, 5, 0.5])
+            col_link1, col_link2, col_link3 = st.columns([0.2, 6, 0.2])
             with col_link2:
                 if st.button("Don't have an account? Sign up", key="switch_signup", use_container_width=True):
                     st.session_state.current_page = 'signup'

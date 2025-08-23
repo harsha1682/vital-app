@@ -8,6 +8,11 @@ import plotly.express as px #type: ignore
 import random #type: ignore
 import numpy as np #type: ignore
 
+import heart
+import medications
+import reports
+
+
 # Database configuration
 DB_CONFIG = {
     'host': 'localhost',
@@ -25,21 +30,71 @@ def create_connection():
         st.error(f"Error connecting to database: {e}")
         return None
 
-
+def create_tables():
+    """Create necessary database tables if they don't exist"""
+    connection = create_connection()
+    if connection:
+        cursor = connection.cursor()
+        
+        # Create users table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(100) NOT NULL,
+            email VARCHAR(100) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            age INT,
+            weight FLOAT,
+            height FLOAT,
+            blood_type VARCHAR(5),
+            allergies TEXT,
+            diseases TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+        
+        # Create vital_signs table with all required columns
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS vital_signs (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            date_recorded DATE NOT NULL,
+            systolic_bp INT,
+            diastolic_bp INT,
+            heart_rate INT,
+            temperature DECIMAL(4,1),
+            glucode INT,
+            water_balance INT,
+            general_health INT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        """)
+        
+        connection.commit()
+        cursor.close()
+        connection.close()
+        return True
+    return False
 
 def get_user_profile(user_id):
     """Get user profile information"""
     connection = create_connection()
     if connection:
         cursor = connection.cursor()
-        cursor.execute("""
-        SELECT username, email, age, weight, height, blood_type, allergies, diseases, created_at 
-        FROM users WHERE id = %s
-        """, (user_id,))
-        profile = cursor.fetchone()
-        cursor.close()
-        connection.close()
-        return profile
+        try:
+            cursor.execute("""
+            SELECT username, email, age, weight, height, blood_type, allergies, diseases, created_at 
+            FROM users WHERE id = %s
+            """, (user_id,))
+            profile = cursor.fetchone()
+            cursor.close()
+            connection.close()
+            return profile
+        except Error as e:
+            st.error(f"Error fetching user profile: {e}")
+            cursor.close()
+            connection.close()
     return None
 
 def get_latest_vital_signs(user_id):
@@ -47,15 +102,20 @@ def get_latest_vital_signs(user_id):
     connection = create_connection()
     if connection:
         cursor = connection.cursor()
-        cursor.execute("""
-        SELECT systolic_bp, diastolic_bp, heart_rate, temperature, glucose, water_balance, general_health
-        FROM vital_signs WHERE user_id = %s ORDER BY date_recorded DESC LIMIT 1
-        """, (user_id,))
-        
-        result = cursor.fetchone()
-        cursor.close()
-        connection.close()
-        return result
+        try:
+            cursor.execute("""
+            SELECT systolic_bp, diastolic_bp, heart_rate, temperature, glucode, water_balance, general_health
+            FROM vital_signs WHERE user_id = %s ORDER BY date_recorded DESC LIMIT 1
+            """, (user_id,))
+            
+            result = cursor.fetchone()
+            cursor.close()
+            connection.close()
+            return result
+        except Error as e:
+            st.error(f"Error fetching vital signs: {e}")
+            cursor.close()
+            connection.close()
     return None
 
 def get_bp_history(user_id, days=7):
@@ -63,17 +123,22 @@ def get_bp_history(user_id, days=7):
     connection = create_connection()
     if connection:
         cursor = connection.cursor()
-        cursor.execute("""
-        SELECT date_recorded, systolic_bp, diastolic_bp
-        FROM vital_signs 
-        WHERE user_id = %s AND date_recorded >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
-        ORDER BY date_recorded ASC
-        """, (user_id, days))
-        
-        records = cursor.fetchall()
-        cursor.close()
-        connection.close()
-        return records
+        try:
+            cursor.execute("""
+            SELECT date_recorded, systolic_bp, diastolic_bp
+            FROM vital_signs 
+            WHERE user_id = %s AND date_recorded >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+            ORDER BY date_recorded ASC
+            """, (user_id, days))
+            
+            records = cursor.fetchall()
+            cursor.close()
+            connection.close()
+            return records
+        except Error as e:
+            st.error(f"Error fetching BP history: {e}")
+            cursor.close()
+            connection.close()
     return []
 
 def generate_sample_data(user_id):
@@ -82,44 +147,42 @@ def generate_sample_data(user_id):
     if connection:
         cursor = connection.cursor()
         
-        # Check if data already exists
-        cursor.execute("SELECT COUNT(*) FROM vital_signs WHERE user_id = %s", (user_id,))
-        count = cursor.fetchone()[0]
-        
-        if count == 0:  # Only generate if no data exists
-            # Generate data for last 7 days
-            for i in range(7):
-                date_record = date.today() - timedelta(days=6-i)
-                systolic = random.randint(110, 140)
-                diastolic = random.randint(70, 90)
-                heart_rate = random.randint(60, 100)
-                temperature = round(random.uniform(36.0, 37.5), 1)
-                glucose = random.randint(80, 120)
-                water_balance = random.randint(35, 65)
-                general_health = random.randint(50, 80)
-                
-                cursor.execute("""
-                INSERT INTO vital_signs (user_id, date_recorded, systolic_bp, diastolic_bp, 
-                heart_rate, temperature, glucose, water_balance, general_health)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (user_id, date_record, systolic, diastolic, heart_rate, temperature, 
-                     glucose, water_balance, general_health))
+        try:
+            # Check if data already exists
+            cursor.execute("SELECT COUNT(*) FROM vital_signs WHERE user_id = %s", (user_id,))
+            count = cursor.fetchone()[0]
             
-            connection.commit()
-        
-        cursor.close()
-        connection.close()
+            if count == 0:  # Only generate if no data exists
+                # Generate data for last 7 days
+                for i in range(7):
+                    date_record = date.today() - timedelta(days=6-i)
+                    systolic = random.randint(110, 140)
+                    diastolic = random.randint(70, 90)
+                    heart_rate = random.randint(60, 100)
+                    temperature = round(random.uniform(36.0, 37.5), 1)
+                    glucose = random.randint(80, 120)
+                    water_balance = random.randint(35, 65)
+                    general_health = random.randint(50, 80)
+                    
+                    cursor.execute("""
+                    INSERT INTO vital_signs (user_id, date_recorded, systolic_bp, diastolic_bp, 
+                    heart_rate, temperature, glucode, water_balance, general_health)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (user_id, date_record, systolic, diastolic, heart_rate, temperature, 
+                         glucose, water_balance, general_health))
+                
+                connection.commit()
+        except Error as e:
+            st.error(f"Error generating sample data: {e}")
+        finally:
+            cursor.close()
+            connection.close()
 
 def load_dashboard_css():
     """Load custom CSS for dashboard"""
     st.markdown("""
     <style>
-    /* Import Google Fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
-    * {
-        font-family: 'Inter', sans-serif;
-    }
     
     /* Hide Streamlit default elements */
     .main > div {
@@ -140,38 +203,11 @@ def load_dashboard_css():
     }
     
     /* Sidebar styling */
-    .css-1d391kg {
-        background: #ffffff;
+    .e1v5e29v2 {
+        background: #07635b;
         border-right: 1px solid #e2e8f0;
     }
     
-    /* Sidebar logo */
-    .sidebar-logo {
-        display: flex;
-        align-items: center;
-        padding: 1.5rem 1rem;
-        border-bottom: 1px solid #e2e8f0;
-        margin-bottom: 1rem;
-    }
-    
-    .sidebar-logo .logo-icon {
-        width: 40px;
-        height: 40px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-size: 1.5rem;
-    }
-    
-    .sidebar-logo h2 {
-        color: #1e293b;
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin: 0;
-    }
     
     /* Navigation items */
     .nav-item {
@@ -206,6 +242,7 @@ def load_dashboard_css():
     .main-content {
         padding: 0 2rem;
     }
+                
     
     /* Header section */
     .dashboard-header {
@@ -241,24 +278,9 @@ def load_dashboard_css():
         margin: 0 0 1rem 0;
     }
     
-    .read-more {
-        color: #3b82f6;
-        text-decoration: none;
-        font-weight: 500;
-        font-size: 0.9rem;
-        display: flex;
-        align-items: center;
-    }
     
-    .time-selector {
-        background: #3b82f6;
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        border: none;
-        font-weight: 500;
-        cursor: pointer;
-    }
+    
+    
     
     /* Metrics grid */
     .metrics-grid {
@@ -291,9 +313,7 @@ def load_dashboard_css():
     }
     
     .metric-card.blood-pressure {
-        background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
-        color: white;
-        border-left: none;
+        border-left: 4px solid #8C1007;
     }
     
     .metric-card.glucose {
@@ -313,14 +333,12 @@ def load_dashboard_css():
     
     .metric-title {
         color: #64748b;
-        font-size: 0.9rem;
+        font-size: 0.5rem;
         font-weight: 500;
         margin: 0;
     }
     
-    .metric-card.blood-pressure .metric-title {
-        color: rgba(255, 255, 255, 0.9);
-    }
+    
     
     .metric-value {
         font-size: 1.75rem;
@@ -329,9 +347,7 @@ def load_dashboard_css():
         margin: 0.25rem 0;
     }
     
-    .metric-card.blood-pressure .metric-value {
-        color: white;
-    }
+    
     
     .metric-subtitle {
         color: #64748b;
@@ -339,9 +355,7 @@ def load_dashboard_css():
         margin: 0;
     }
     
-    .metric-card.blood-pressure .metric-subtitle {
-        color: rgba(255, 255, 255, 0.8);
-    }
+    
     
     /* Bottom section */
     .bottom-section {
@@ -453,6 +467,51 @@ def load_dashboard_css():
         cursor: pointer;
     }
     
+    /* Profile section */
+    .profile-section {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+    }
+    .profile-icon {
+        font-size: 1.5rem;
+        margin-right: 8px;
+    }      
+    .profile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+                
+    .profile-title {
+        color: #1e293b;
+        font-size; 1.25rem;
+        font-weight: 600;
+        margin: 0;    
+    }
+    
+    .profile-value {
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0.25rem 0;
+    }
+    
+    .profile-subtitle {
+        color: #64748b;
+        font-size: 0.8rem;
+        margin: 0;
+    }
+    
+    .profile-details p {
+        margin: 6px 0;
+        font-size: 20px;
+        color: #444;
+    }
+    
     /* Mobile responsive */
     @media (max-width: 768px) {
         .main-content {
@@ -470,6 +529,7 @@ def load_dashboard_css():
     </style>
     """, unsafe_allow_html=True)
 
+
 def create_circular_progress(percentage, color="#06b6d4"):
     """Create SVG circular progress indicator"""
     radius = 54
@@ -486,12 +546,7 @@ def create_circular_progress(percentage, color="#06b6d4"):
 
 def dashboard_sidebar():
     """Create dashboard sidebar"""
-    st.markdown("""
-    <div class="sidebar-logo">
-        <div class="logo-icon">🏥</div>
-        <h2>HealthCare</h2>
-    </div>
-    """, unsafe_allow_html=True)
+    st.image("Logo.png",  use_container_width=True)
     
     # Initialize dashboard page in session state if not exists
     if 'dashboard_page' not in st.session_state:
@@ -499,21 +554,21 @@ def dashboard_sidebar():
     
     # Navigation menu
     nav_items = [
-        ("Dashboard", "📊", "Dashboard"),
-        ("Heart", "❤️", "Heart"),
-        ("Medications", "💊", "Medications"),
-        ("Reports", "📋", "Reports")
+        ("Dashboard",  "Dashboard"),
+        ("Heart", "Heart"),
+        ("Medications", "Medications"),
+        ("Reports",  "Reports")
     ]
     
-    for item, icon, key in nav_items:
-        if st.button(f"{icon} {item}", key=f"nav_{key}", use_container_width=True):
+    for item, key in nav_items:
+        if st.button(f"{item}", key=f"nav_{key}", use_container_width=True):
             st.session_state.dashboard_page = key
             st.rerun()
     
     st.markdown("---")
     
     # Logout button
-    if st.button("🚪 Logout", key="logout_btn", use_container_width=True):
+    if st.button("Logout", key="logout_btn", use_container_width=True):
         # Clear session state for logout
         for key in list(st.session_state.keys()):
             del st.session_state[key]
@@ -535,9 +590,9 @@ def dashboard_main():
     
     # Default values if no data
     if vital_signs:
-        systolic, diastolic, heart_rate, temperature, glucose, water_balance, general_health = vital_signs
+        systolic_bp, diastolic_bp, heart_rate, temperature, glucode, water_balance, general_health = vital_signs
     else:
-        systolic, diastolic, heart_rate, temperature, glucose, water_balance, general_health = 120, 80, 75, 36.8, 95, 42, 61
+        systolic_bp, diastolic_bp, heart_rate, temperature, glucode, water_balance, general_health = 120, 80, 75, 36.8, 95, 42, 61
     
     # Header section
     st.markdown(f"""
@@ -546,9 +601,7 @@ def dashboard_main():
             <div class="welcome-text">
                 <h1>Hello, <span class="username">{st.session_state.username}</span></h1>
                 <p>Have a nice day and don't forget to take care of your health!</p>
-                <a href="#" class="read-more">Read more →</a>
             </div>
-            <button class="time-selector">THIS WEEK</button>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -564,7 +617,7 @@ def dashboard_main():
                 <h3 class="metric-title">Heart rate</h3>
             </div>
             <div class="metric-value">{heart_rate} <small>BPM</small></div>
-            <p class="metric-subtitle">Pulse is the most important parameter for good health</p>
+            <p class="metric-subtitle">Pulse is the most important parameter to maintain good health </p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -575,8 +628,8 @@ def dashboard_main():
                 <div class="metric-icon">🌡️</div>
                 <h3 class="metric-title">Temperature</h3>
             </div>
-            <div class="metric-value">{temperature}°C</div>
-            <p class="metric-subtitle">Temperature shows the body's ability to generate heat</p>
+            <div class="metric-value">{temperature}Â°C</div>
+            <p class="metric-subtitle">Temperature is the body's ability to generate heat</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -587,7 +640,7 @@ def dashboard_main():
                 <div class="metric-icon">🩺</div>
                 <h3 class="metric-title">Blood pressure</h3>
             </div>
-            <div class="metric-value">{systolic}/{diastolic}</div>
+            <div class="metric-value">{systolic_bp}/{diastolic_bp}</div>
             <p class="metric-subtitle">Blood pressure can rise and fall throughout the day</p>
         </div>
         """, unsafe_allow_html=True)
@@ -596,14 +649,16 @@ def dashboard_main():
         st.markdown(f"""
         <div class="metric-card glucose">
             <div class="metric-header">
-                <div class="metric-icon">🍯</div>
+                <div class="metric-icon">💉</div>
                 <h3 class="metric-title">Glucose</h3>
             </div>
-            <div class="metric-value">{glucose} <small>mg/dl</small></div>
-            <p class="metric-subtitle">The normal concentration of glucose in the blood</p>
+            <div class="metric-value">{glucode} <small>mg/dl</small></div>
+            <p class="metric-subtitle">Glucose is body's main source of energy to function properly</p>
         </div>
         """, unsafe_allow_html=True)
     
+    st.markdown("---")
+
     # Bottom section
     col_left, col_right = st.columns([1, 2])
     
@@ -633,95 +688,35 @@ def dashboard_main():
         """, unsafe_allow_html=True)
     
     with col_right:
-        # Blood pressure chart
-        st.markdown("""
-        <div class="chart-section">
-            <div class="chart-header">
-                <h3 class="chart-title">Activity Analytics</h3>
-                <select class="chart-period">
-                    <option>Week</option>
-                </select>
+        #get user details
+        user=get_user_profile(st.session_state.user_id)
+
+        if user:
+            username, email, age, weight, height, blood_type, allergies, diseases, created_at= user
+            # Blood pressure chart
+            st.markdown(f"""
+            <div class="profile-section">
+                <div class="profile-header">
+                    <h3 class="profile-title">👤 Profile</h3>
+                </div>
+                <div class="profile-details">
+                        <p><b>Patient Name:</b> {username}</p>
+                        <p><b>Email:</b> {email}</p>
+                        <p><b>Age:</b> {age}</p>  
+                        <p><b>Weight:</b> {weight}</p>
+                        <p><b>Height:</b> {height}</p>
+                        <p><b>Blood type:</b> {blood_type}</p>
+                        <p><b>Allergies:</b> {allergies}</p>
+                        <p><b>Diseases:</b> {diseases}</p>
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
         
-        # Get BP history and create chart
-        bp_history = get_bp_history(st.session_state.user_id, 7)
         
-        if bp_history:
-            # Convert to DataFrame
-            df = pd.DataFrame(bp_history, columns=['Date', 'Systolic', 'Diastolic'])
-            df['Date'] = pd.to_datetime(df['Date'])
-            
-            # Create the blood pressure line chart
-            fig = go.Figure()
-            
-            # Add systolic line
-            fig.add_trace(go.Scatter(
-                x=df['Date'],
-                y=df['Systolic'],
-                mode='lines+markers',
-                name='Systolic',
-                line=dict(color='#ef4444', width=3),
-                marker=dict(size=8)
-            ))
-            
-            # Add diastolic line
-            fig.add_trace(go.Scatter(
-                x=df['Date'],
-                y=df['Diastolic'],
-                mode='lines+markers',
-                name='Diastolic',
-                line=dict(color='#3b82f6', width=3),
-                marker=dict(size=8)
-            ))
-            
-            fig.update_layout(
-                height=300,
-                margin=dict(t=20, b=20, l=20, r=20),
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                xaxis=dict(
-                    showgrid=True,
-                    gridwidth=1,
-                    gridcolor='#e2e8f0',
-                    showline=False,
-                    tickformat='%a'
-                ),
-                yaxis=dict(
-                    showgrid=True,
-                    gridwidth=1,
-                    gridcolor='#e2e8f0',
-                    showline=False,
-                    title='BP (mmHg)'
-                ),
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom",
-                    y=1.02,
-                    xanchor="right",
-                    x=1
-                )
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No blood pressure data available. Start recording your vitals!")
+        
+        
 
-def heart_page():
-    """Heart monitoring page"""
-    st.title("❤️ Heart Monitor")
-    st.info("Heart monitoring page - Coming soon!")
 
-def medications_page():
-    """Medications page"""
-    st.title("💊 Medications")
-    st.info("Medications page - Coming soon!")
-
-def reports_page():
-    """Reports page"""
-    st.title("📋 Reports")
-    st.info("Reports page - Coming soon!")
 
 def run_dashboard():
     """Main function to run the dashboard"""
@@ -737,8 +732,10 @@ def run_dashboard():
         st.error("Please log in to access the dashboard")
         st.stop()
     
-    # Create vital signs table
-    
+    # Create necessary tables
+    if not create_tables():
+        st.error("Failed to create database tables. Please check your database connection.")
+        st.stop()
     
     # Load custom CSS
     load_dashboard_css()
@@ -754,11 +751,14 @@ def run_dashboard():
     if st.session_state.dashboard_page == "Dashboard":
         dashboard_main()
     elif st.session_state.dashboard_page == "Heart":
-        heart_page()
+        import heart as heart 
+        heart.run_heart_page()
     elif st.session_state.dashboard_page == "Medications":
-        medications_page()
+        import medications as med
+        med.run_med_page()
     elif st.session_state.dashboard_page == "Reports":
-        reports_page()
+        import reports as reports
+        reports.run_reports_page()
 
 # If running this file directly
 if __name__ == "__main__":

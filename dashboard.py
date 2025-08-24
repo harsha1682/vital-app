@@ -53,9 +53,13 @@ def create_tables():
         )
         """)
         
-        # Create vital_signs table with all required columns
+        # Drop old tables if they exist
+        cursor.execute("DROP TABLE IF EXISTS vital_signs")
+        cursor.execute("DROP TABLE IF EXISTS heart_results")
+        
+        # Create new unified vital_results table
         cursor.execute("""
-        CREATE TABLE IF NOT EXISTS vital_signs (
+        CREATE TABLE IF NOT EXISTS vital_results (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
             date_recorded DATE NOT NULL,
@@ -63,9 +67,9 @@ def create_tables():
             diastolic_bp INT,
             heart_rate INT,
             temperature DECIMAL(4,1),
-            glucode INT,
+            glucose_level INT,
+            blood_status VARCHAR(20),
             water_balance INT,
-            general_health INT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
@@ -97,15 +101,15 @@ def get_user_profile(user_id):
             connection.close()
     return None
 
-def get_latest_vital_signs(user_id):
-    """Get latest vital signs for dashboard"""
+def get_latest_vital_results(user_id):
+    """Get latest vital results for dashboard"""
     connection = create_connection()
     if connection:
         cursor = connection.cursor()
         try:
             cursor.execute("""
-            SELECT systolic_bp, diastolic_bp, heart_rate, temperature, glucode, water_balance, general_health
-            FROM vital_signs WHERE user_id = %s ORDER BY date_recorded DESC LIMIT 1
+            SELECT systolic_bp, diastolic_bp, heart_rate, temperature, glucose_level, blood_status, water_balance
+            FROM vital_results WHERE user_id = %s ORDER BY date_recorded DESC LIMIT 1
             """, (user_id,))
             
             result = cursor.fetchone()
@@ -113,7 +117,7 @@ def get_latest_vital_signs(user_id):
             connection.close()
             return result
         except Error as e:
-            st.error(f"Error fetching vital signs: {e}")
+            st.error(f"Error fetching vital results: {e}")
             cursor.close()
             connection.close()
     return None
@@ -126,7 +130,7 @@ def get_bp_history(user_id, days=7):
         try:
             cursor.execute("""
             SELECT date_recorded, systolic_bp, diastolic_bp
-            FROM vital_signs 
+            FROM vital_results 
             WHERE user_id = %s AND date_recorded >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
             ORDER BY date_recorded ASC
             """, (user_id, days))
@@ -142,14 +146,14 @@ def get_bp_history(user_id, days=7):
     return []
 
 def generate_sample_data(user_id):
-    """Generate sample vital signs data for demo purposes"""
+    """Generate sample vital results data for demo purposes"""
     connection = create_connection()
     if connection:
         cursor = connection.cursor()
         
         try:
             # Check if data already exists
-            cursor.execute("SELECT COUNT(*) FROM vital_signs WHERE user_id = %s", (user_id,))
+            cursor.execute("SELECT COUNT(*) FROM vital_results WHERE user_id = %s", (user_id,))
             count = cursor.fetchone()[0]
             
             if count == 0:  # Only generate if no data exists
@@ -161,16 +165,15 @@ def generate_sample_data(user_id):
                     heart_rate = random.randint(60, 100)
                     temperature = round(random.uniform(36.0, 37.5), 1)
                     glucose = random.randint(80, 120)
+                    blood_status = f"{systolic}/{diastolic}"
                     water_balance = random.randint(1, 10)
-                    general_health = random.randint(50, 80)
-                    
                     
                     cursor.execute("""
-                    INSERT INTO vital_signs (user_id, date_recorded, systolic_bp, diastolic_bp, 
-                    heart_rate, temperature, glucode, water_balance, general_health, water_glasses)
+                    INSERT INTO vital_results (user_id, date_recorded, systolic_bp, diastolic_bp, 
+                    heart_rate, temperature, glucose_level, blood_status, water_balance)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, (user_id, date_record, systolic, diastolic, heart_rate, temperature, 
-                         glucose, water_balance, general_health))
+                         glucose, blood_status, water_balance))
                 
                 connection.commit()
         except Error as e:
@@ -428,8 +431,7 @@ def dashboard_sidebar():
     nav_items = [
         ("Dashboard",  "Dashboard"),
         ("Heart", "Heart"),
-        ("Medications", "Medications"),
-        ("Reports",  "Reports")
+        ("Medications", "Medications")
     ]
     
     for item, key in nav_items:
@@ -457,14 +459,14 @@ def dashboard_main():
     # Generate sample data for demo
     generate_sample_data(st.session_state.user_id)
     
-    # Get latest vital signs
-    vital_signs = get_latest_vital_signs(st.session_state.user_id)
+    # Get latest vital results
+    vital_results = get_latest_vital_results(st.session_state.user_id)
     
     # Default values if no data
-    if vital_signs:
-        systolic_bp, diastolic_bp, heart_rate, temperature, glucode, water_balance, general_health = vital_signs
+    if vital_results:
+        systolic_bp, diastolic_bp, heart_rate, temperature, glucose_level, blood_status, water_balance = vital_results
     else:
-        systolic_bp, diastolic_bp, heart_rate, temperature, glucode, water_balance, general_health = 120, 80, 75, 36.8, 95, 3, 61
+        systolic_bp, diastolic_bp, heart_rate, temperature, glucose_level, blood_status, water_balance = 120, 80, 75, 36.8, 95, "120/80", 3
     
     # Header section
     st.markdown(f"""
@@ -524,7 +526,7 @@ def dashboard_main():
                 <div class="metric-icon">💉</div>
                 <h3 class="metric-title">Glucose</h3>
             </div>
-            <div class="metric-value">{glucode} <small>mg/dl</small></div>
+            <div class="metric-value">{glucose_level} <small>mg/dl</small></div>
             <p class="metric-subtitle">Glucose is body's main source of energy to function properly</p>
         </div>
         """, unsafe_allow_html=True)
@@ -615,9 +617,6 @@ def run_dashboard():
     elif st.session_state.dashboard_page == "Medications":
         import medications as med
         med.run_med_page()
-    elif st.session_state.dashboard_page == "Reports":
-        import reports as reports
-        reports.run_reports_page()
 
 # If running this file directly
 if __name__ == "__main__":

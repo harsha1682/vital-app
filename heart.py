@@ -25,43 +25,45 @@ def create_connection():
         st.error(f"Error connecting to database: {e}")
         return None
 
-def create_heart_tables():
-    """Create heart-related database tables"""
+def create_vital_results_table():
+    """Create vital_results table if it doesn't exist"""
     connection = create_connection()
     if connection:
-        mycursor = connection.cursor()
+        cursor = connection.cursor()
         
-        # Create heart_results table
-        mycursor.execute("""
-        CREATE TABLE IF NOT EXISTS heart_results (
+        # Create unified vital_results table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS vital_results (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
-            blood_status VARCHAR(20),
-            heart_rate INT,
-            blood_count VARCHAR(20),
-            glucose_level INT,
             date_recorded DATE NOT NULL,
+            systolic_bp INT,
+            diastolic_bp INT,
+            heart_rate INT,
+            temperature DECIMAL(4,1),
+            glucose_level INT,
+            blood_status VARCHAR(20),
+            water_balance INT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
         """)
         
-        
         connection.commit()
-        mycursor.close()
+        cursor.close()
         connection.close()
         return True
     return False
 
 def get_latest_heart_results(user_id):
-    """Get latest heart results"""
+    """Get latest heart results from vital_results table"""
     connection = create_connection()
     if connection:
         cursor = connection.cursor()
         try:
             cursor.execute("""
-            SELECT blood_status, heart_rate, blood_count, glucose_level, date_recorded
-            FROM heart_results WHERE user_id = %s ORDER BY date_recorded DESC LIMIT 1
+            SELECT blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, date_recorded
+            FROM vital_results WHERE user_id = %s ORDER BY date_recorded DESC LIMIT 1
             """, (user_id,))
             
             result = cursor.fetchone()
@@ -74,16 +76,15 @@ def get_latest_heart_results(user_id):
             connection.close()
     return None
 
-
 def get_heart_history(user_id, days=30):
-    """Get heart history for results or problems"""
+    """Get heart history from vital_results table"""
     connection = create_connection()
     if connection:
         cursor = connection.cursor()
         try:
             cursor.execute("""
-            SELECT blood_status, heart_rate, blood_count, glucose_level, date_recorded
-            FROM heart_results 
+            SELECT blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, date_recorded
+            FROM vital_results 
             WHERE user_id = %s AND date_recorded >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
             ORDER BY date_recorded DESC
             """, (user_id, days))
@@ -98,16 +99,41 @@ def get_heart_history(user_id, days=30):
             connection.close()
     return []
 
-def save_heart_results(user_id, blood_status, heart_rate, blood_count, glucose_level):
-    """Save heart results to database"""
+def get_complete_vital_record(user_id, date_recorded):
+    """Get temperature and water_balance for a specific date"""
     connection = create_connection()
     if connection:
         cursor = connection.cursor()
         try:
             cursor.execute("""
-            INSERT INTO heart_results (user_id, blood_status, heart_rate, blood_count, glucose_level, date_recorded)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (user_id, blood_status, heart_rate, blood_count, glucose_level, date.today()))
+            SELECT temperature, water_balance
+            FROM vital_results 
+            WHERE user_id = %s AND date_recorded = %s
+            LIMIT 1
+            """, (user_id, date_recorded))
+            
+            result = cursor.fetchone()
+            cursor.close()
+            connection.close()
+            return result
+        except Error as e:
+            st.error(f"Error fetching complete vital record: {e}")
+            cursor.close()
+            connection.close()
+    return None
+
+def save_heart_results(user_id, blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, water_balance, temperature):
+    """Save heart results to vital_results table"""
+    connection = create_connection()
+    if connection:
+        cursor = connection.cursor()
+        try:
+            cursor.execute("""
+            INSERT INTO vital_results (user_id, blood_status, heart_rate, systolic_bp, diastolic_bp, 
+            glucose_level, water_balance, temperature, date_recorded)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (user_id, blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, 
+                 water_balance, temperature, date.today()))
             
             connection.commit()
             cursor.close()
@@ -119,7 +145,6 @@ def save_heart_results(user_id, blood_status, heart_rate, blood_count, glucose_l
             connection.close()
     return False
 
-
 def generate_heart_sample_data(user_id):
     """Generate sample heart data for demo"""
     connection = create_connection()
@@ -127,21 +152,29 @@ def generate_heart_sample_data(user_id):
         cursor = connection.cursor()
         
         try:
-            # Check if heart results data exists
-            cursor.execute("SELECT COUNT(*) FROM heart_results WHERE user_id = %s", (user_id,))
+            # Check if vital results data exists
+            cursor.execute("SELECT COUNT(*) FROM vital_results WHERE user_id = %s", (user_id,))
             results_count = cursor.fetchone()[0]
             
             if results_count == 0:
                 # Generate sample results data
-                blood_statuses = ["112/75", "118/78", "115/72", "120/80"]
-                blood_counts = ["79-92", "80-95", "75-88", "82-90"]
-                
                 for i in range(4):
                     date_record = date.today() - timedelta(days=3-i)
+                    systolic = random.randint(110, 130)
+                    diastolic = random.randint(70, 85)
+                    blood_status = f"{systolic}/{diastolic}"
+                    heart_rate = random.randint(110, 130)
+                    glucose_level = random.randint(155, 170)
+                    water_balance = random.randint(3, 8)
+                    temperature = round(random.uniform(36.0, 37.5), 1)
+                    
                     cursor.execute("""
-                    INSERT INTO heart_results (user_id, blood_status, heart_rate, blood_count, glucose_level, date_recorded)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    """, (user_id, blood_statuses[i], random.randint(110, 130), blood_counts[i], random.randint(155, 170), date_record))
+                    INSERT INTO vital_results (user_id, blood_status, heart_rate, systolic_bp, diastolic_bp,
+                    glucose_level, water_balance, temperature, date_recorded)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (user_id, blood_status, heart_rate, systolic, diastolic, glucose_level, 
+                         water_balance, temperature, date_record))
+                         
             connection.commit()
 
         except Error as e:
@@ -215,6 +248,14 @@ def load_heart_css():
         border-left: 4px solid #eab308;
     }
     
+    .metric-card.temperature {
+        border-left: 4px solid #06b6d4;
+    }
+                
+    .metric-card.water {
+        border-left: 4px solid #262657;
+    }
+                
     .metric-header {
         display: flex;
         align-items: center;
@@ -454,9 +495,12 @@ def heart_results_tab():
     results = get_latest_heart_results(st.session_state.user_id)
     
     if results:
-        blood_status, heart_rate, blood_count, glucose_level, date_recorded = results
+        blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, date_recorded = results
+        # Calculate blood count range for display
+        blood_count = f"{diastolic_bp}-{systolic_bp}"
     else:
-        blood_status, heart_rate, blood_count, glucose_level = "112/75", 120, "79-92", 162
+        blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level = "120/80", 120, 120, 80, 162
+        blood_count = f"{diastolic_bp}-{systolic_bp}"
     
     
 
@@ -507,28 +551,69 @@ def heart_results_tab():
                     <div class="metric-icon">💉</div>
                     <h3 class="metric-title">Glucose Level</h3>
                 </div>
-                <div class="metric-value">{glucose_level} /ml</div>
+                <div class="metric-value">{glucose_level} mg/dL </div>
             </div>
 
             """, unsafe_allow_html=True)
 
 
-def heart_history_tab():
+
+def heart_diagnosis_tab():
     
+    
+    col1, col2 = st.columns(2, border=True)
+    
+    with col1:
+        blood_status = st.text_input("Blood Status (e.g., 120/80)", placeholder="Enter blood pressure", key="diag_blood_status")
+        heart_rate = st.number_input("Heart Rate (BPM)", min_value=40, max_value=200, value=75, key="diag_heart_rate")
+        water_balance = st.number_input("How many glasses of water have you drank today?", min_value=1, max_value=50)
+    
+    with col2:
+        systolic_bp = st.number_input("Systolic BP", min_value=80, max_value=200, value=120, key="diag_systolic")
+        diastolic_bp = st.number_input("Diastolic BP", min_value=40, max_value=120, value=80, key="diag_diastolic")
+        glucose_level = st.number_input("Glucose Level (/ml)", min_value=50, max_value=300, value=100, key="diag_glucose")
+        temperature = st.number_input("Temperature (°C)", min_value=30.0, max_value=45.0, value=36.8, step=0.1)
+
+    
+    
+    # Submit button
+    col1, col2, col3 = st.columns([1, 2, 2])
+    with col1:
+        if st.button("Save", key="submit_diagnosis", use_container_width=True):
+            if blood_status and heart_rate and water_balance and systolic_bp and diastolic_bp and glucose_level and temperature:
+                # Save results
+                if save_heart_results(st.session_state.user_id, blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, water_balance, temperature):
+                    st.success("✅ Results saved successfully!")
+                    st.balloons()
+                    # Refresh to show new data
+                    st.rerun()
+                else:
+                    st.error("❌ Failed to save results")
+            else:
+                st.error("⚠️ Please fill in all required fields")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+def heart_history_tab():
     # Get results history
     results_history = get_heart_history(st.session_state.user_id, 30)
     
     if results_history:
-        date_options=[r[4] for r in results_history]
+        date_options = [r[5] for r in results_history]  # date_recorded is at index 5
         
-        col1,col2,col3=st.columns([1,2,2])
+        col1, col2, col3 = st.columns([1, 2, 2])
         with col1:
-            selected_date = st.selectbox("Choose date",date_options, index=0)
+            selected_date = st.selectbox("Choose date", date_options, index=0)
 
-        filtered_results = [r for r in results_history if r[4] == selected_date]
+        # Filter results for selected date
+        filtered_results = [r for r in results_history if r[5] == selected_date]  # date_recorded is at index 5
 
-        for blood_status, heart_rate, blood_count, glucose_level, date_recorded in filtered_results:
+        for result in filtered_results:
+            # Unpack all 6 values from the query result
+            blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, date_recorded = result
             
+            # Calculate blood count range for display
+            blood_count = f"{diastolic_bp}-{systolic_bp}"
             st.markdown("---")
 
             col1, col2, col3, col4 = st.columns(4)
@@ -539,7 +624,7 @@ def heart_history_tab():
                         <div class="metric-icon">🩸</div>
                         <h3 class="metric-title">Blood Status</h3>
                     </div>
-                    <div class="metric-value">{blood_status} </div>
+                    <div class="metric-value">{blood_status}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -553,6 +638,7 @@ def heart_history_tab():
                     <div class="metric-value">{heart_rate} BPM</div>
                 </div>
                 """, unsafe_allow_html=True)
+                
             with col3:
                 st.markdown(f"""
                 <div class="metric-card blood-pressure">
@@ -563,6 +649,7 @@ def heart_history_tab():
                     <div class="metric-value">{blood_count} BPM</div>
                 </div>
                 """, unsafe_allow_html=True)
+                
             with col4:
                 st.markdown(f"""
                 <div class="metric-card glucose-level">
@@ -570,68 +657,55 @@ def heart_history_tab():
                         <div class="metric-icon">💉</div>
                         <h3 class="metric-title">Glucose Level</h3>
                     </div>
-                    <div class="metric-value">{glucose_level} /ml</div>
+                    <div class="metric-value">{glucose_level} mg/dL</div>
                 </div>
-
                 """, unsafe_allow_html=True)
         
             st.markdown("---")
-
-            st.markdown(f"""
-            <div class="medications-header">
-                <div class="medications-section">
-                    <div class="medications-text">
-                        <h3>Medications History</h3>
-                        <p>No medications taken</p>
+            
+            # Now we need to get temperature and water_balance from the database
+            # Get the complete record for this date
+            temp_water_result = get_complete_vital_record(st.session_state.user_id, date_recorded)
+            
+            if temp_water_result:
+                temperature, water_balance = temp_water_result
+            else:
+                # Default values if not found
+                temperature, water_balance = 36.8, 3
+            
+            temp, water = st.columns(2)
+            with temp:
+                st.markdown(f"""
+                <div class="metric-card temperature">
+                    <div class="metric-header">
+                        <div class="metric-icon">🌡️</div>
+                        <h3 class="metric-title">Temperature</h3>
                     </div>
+                    <div class="metric-value">{temperature}°C</div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
-
+                """, unsafe_allow_html=True)
+            
+            with water:
+                st.markdown(f"""
+                <div class="metric-card water">
+                    <div class="metric-header">
+                        <div class="metric-icon">🥛</div>
+                        <h3 class="metric-title">Water Balance</h3>
+                    </div>
+                    <div class="metric-value"><small>you have had</small> {water_balance} <small>glasses of water today!</small></div>
+                </div>
+                """, unsafe_allow_html=True)
 
     else:
         st.info("No results history found.")
     
-    st.markdown("---")
-    
-    
+    st.markdown("---") 
 
-def heart_diagnosis_tab():
-    
-    
-    col1, col2 = st.columns(2, border=True)
-    
-    with col1:
-        blood_status = st.text_input("Blood Status (e.g., 120/80)", placeholder="Enter blood pressure", key="diag_blood_status")
-        heart_rate = st.number_input("Heart Rate (BPM)", min_value=40, max_value=200, value=75, key="diag_heart_rate")
-        water_balance = st.number_input("How many glasses of water have you drank today?", min_value=1, max_value=50)
-    
-    with col2:
-        blood_count = st.text_input("Blood Count Range", placeholder="e.g., 79-92", key="diag_blood_count")
-        glucose_level = st.number_input("Glucose Level (/ml)", min_value=50, max_value=300, value=100, key="diag_glucose")
-        temperature = st.number_input("Temperature (* C)", min_value=0, max_value=50)
-
-    
-    
-    # Submit button
-    col1, col2, col3 = st.columns([1, 2, 2])
-    with col1:
-        if st.button("Save", key="submit_diagnosis", use_container_width=True):
-            if blood_status and heart_rate and water_balance and blood_count and glucose_level and temperature:
-                # Save results
-                if save_heart_results(st.session_state.user_id, blood_status, heart_rate, blood_count, glucose_level):
-                    st.balloons()
-                else:
-                    st.error("Failed to save results")
-            else:
-                st.error(" Please fill in all required fields")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
 
 def run_heart_page():
     """Main function to run the heart page"""
-    # Create heart tables
-    create_heart_tables()
+    # Create vital_results table
+    create_vital_results_table()
     
     # Load CSS
     load_heart_css()

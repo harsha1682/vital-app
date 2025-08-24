@@ -61,11 +61,11 @@ def add_medication(medication_name, time_hour, dose, medication_type, start_day,
     if connection:
         try:
             cursor = connection.cursor()
-            insert_query = """
+            cursor.execute("""
             INSERT INTO medications (medication_name, time_hour, dose, medication_type, start_day, end_day, duration, comments)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """
-            cursor.execute(insert_query, (medication_name, time_hour, dose, medication_type, start_day, end_day, duration, comments))
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (medication_name, time_hour, dose, medication_type, start_day, end_day, duration, comments))
+
             connection.commit()
             cursor.close()
             connection.close()
@@ -299,7 +299,7 @@ def run_med_page():
     # Create two columns layout
     col1, col2 = st.columns([1, 2], gap="small")
     
-    # Right column - Display existing medications
+    
     with col1:
         st.subheader("Current Medications")
         medications = get_all_medications()
@@ -308,7 +308,7 @@ def run_med_page():
         # Show total count
         st.info(f"Total Medications: {len(medications)}")
     
-    # Left column - Add new medication form
+    
     with col2:
         st.subheader("Add New Medication")
         

@@ -84,12 +84,13 @@ def login_user(email, password):
 
 
 
-
-def get_base64_of_bin_file(bin_file):
-    with open(bin_file, "rb") as f:
+def get_base64_of_bin_file(background):
+    with open(background, "rb") as f:
         return base64.b64encode(f.read()).decode()
 
 bg_image = get_base64_of_bin_file("bg.png")
+
+
 
 st.markdown(f"""
     <style>
@@ -237,6 +238,7 @@ def load_medical_css():
     .e1hznt4w0 {
         color: black;
     }
+                
     /* Mobile responsive */
     @media (max-width: 768px) {
         

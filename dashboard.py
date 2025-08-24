@@ -7,18 +7,23 @@ import plotly.graph_objects as go #type: ignore
 import plotly.express as px #type: ignore
 import random #type: ignore
 import numpy as np #type: ignore
+import os
+
 
 import heart
 import medications
 
+from helper import load_env_file
+load_env_file()
 
 
 # Database configuration
 DB_CONFIG = {
-    'host': 'localhost',
-    'database': 'vital_signs_db',
-    'user': 'root',
-    'password': 'H0ney123'
+    'host': os.environ.get('HOST'),
+    'database': os.environ.get('DATABASE_NAME'),
+    'user': os.environ.get('USER'),
+    'password': os.environ.get('PASSWORD'),
+    'port': int(os.environ.get('PORT', 3306))
 }
 
 def create_connection():

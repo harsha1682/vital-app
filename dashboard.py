@@ -10,7 +10,7 @@ import numpy as np #type: ignore
 
 import heart
 import medications
-import reports
+
 
 
 # Database configuration

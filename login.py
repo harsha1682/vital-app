@@ -39,6 +39,34 @@ def hash_password(password):
     """Hash password using SHA-256"""
     return hashlib.sha256(password.encode()).hexdigest()
 
+def create_user():
+    connection = create_connection()
+    if connection:
+        cursor = connection.cursor()
+        
+        # Create users table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(100) NOT NULL,
+            email VARCHAR(100) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            age INT,
+            weight FLOAT,
+            height FLOAT,
+            blood_type VARCHAR(5),
+            allergies TEXT,
+            diseases TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+        return True
+    return False
+
 def register_user(username, password, email, age, weight, height, blood_type, allergies, diseases):
     """Register a new user"""
     connection = create_connection()
@@ -91,7 +119,6 @@ def get_base64_of_bin_file(background):
 bg_image = get_base64_of_bin_file("bg.png")
 
 
-
 st.markdown(f"""
     <style>
     .stApp {{
@@ -107,21 +134,7 @@ def load_medical_css():
     """Load custom CSS for medical theme"""
     st.markdown("""
     <style>
-    /* Remove default Streamlit styling */
-    .main > div {
-        padding: 0 !important;
-    }
-    
-    
-    
-    /* Hide Streamlit header and footer */
-    header[data-testid="stHeader"] {
-        display: none;
-    }
-    
-    .stDeployButton {
-        display: none;
-    }
+
                 
     /* Main container */
     .login-main-container {
@@ -278,7 +291,6 @@ def login_page():
                     if login_user(email, password):
                         st.success("Login successful! Redirecting...")
                         st.balloons()
-                        # Here you would redirect to main dashboard
                         time.sleep(1)
                         #rerun app
                         st.rerun()
@@ -287,7 +299,7 @@ def login_page():
                 else:
                     st.warning("⚠️ Please enter both email and password")
         
-            # Switch to signup link
+            # switch to signup link
             st.markdown("---")
             col_link1, col_link2, col_link3 = st.columns([0.2, 6, 0.2])
             with col_link2:
@@ -303,8 +315,7 @@ def signup_page():
 
     with col2:
         
-        
-        # Basic Information Section
+
         st.markdown('<div class="form-section"><h4>👤 Basic Information</h4></div>', unsafe_allow_html=True)
         
         col_form1, col_form2 = st.columns(2)
@@ -316,7 +327,7 @@ def signup_page():
             email = st.text_input("Email", placeholder="Email address", key="signup_email")
             confirm_password = st.text_input("Confirm Password", type="password", placeholder="Confirm password", key="confirm_password")
         
-        # Medical Information Section
+        
         st.markdown('<div class="form-section"><h4>🏥 Medical Information</h4></div>', unsafe_allow_html=True)
         
         col_med1, col_med2 = st.columns(2)
@@ -350,7 +361,7 @@ def signup_page():
                 else:
                     st.error("❌ Registration failed. Email may already exist.")
         
-        # Switch to login link
+        # switch to login link
         st.markdown("---")
         col_link1, col_link2, col_link3 = st.columns([1, 2, 1])
         with col_link2:
@@ -380,7 +391,7 @@ def show_dashboard_placeholder():
     st.markdown("---")
     
     if st.button("🚪 Logout", use_container_width=True):
-        # Clear session state for logout
+        # clear session state for logout
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
@@ -396,7 +407,7 @@ def main():
     )
     
     
-    
+    create_user()
     # Load custom CSS
     load_medical_css()
 
@@ -409,10 +420,9 @@ if st.session_state.logged_in:
         show_dashboard_placeholder()
 else:
 
-    # Main container
     st.markdown('<div class="login-main-container">', unsafe_allow_html=True)
     
-    # Show appropriate page
+
     if st.session_state.current_page == 'login':
         login_page()
     else:

@@ -244,7 +244,6 @@ def display_medication_cards(medications):
         return
     
     for med in medications:
-        # Get appropriate icon based on medication type
         icon = "💊"
         if med.get('medication_type'):
             med_type = med['medication_type'].lower()
@@ -290,7 +289,7 @@ def run_med_page():
             <div class="med-text">
                 <h1>👩🏻‍⚕️ Medication Reminder</h1>
                 <p>Stay consistent with your medicines — each dose is a step towards better health!</p> 
-                <p>You've got this 🙌</p>
+                <p>You got this 🙌</p>
             </div>
         </div>
     </div>
@@ -342,7 +341,6 @@ def run_med_page():
             submitted = st.form_submit_button("Add Medication", type="primary")
             
             if submitted:
-                # Validate required fields
                 if not medication_name:
                     st.error("Please enter a medication name")
                 elif not medication_type:

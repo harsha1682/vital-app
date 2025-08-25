@@ -7,13 +7,14 @@ import plotly.graph_objects as go #type: ignore
 import plotly.express as px #type: ignore
 import random #type: ignore
 import numpy as np #type: ignore
+import hashlib
 
 import heart
 import medications
 
 
 
-# Database configuration
+
 DB_CONFIG = {
     'host': 'localhost',
     'database': 'vital_signs_db',
@@ -53,11 +54,8 @@ def create_tables():
         )
         """)
         
-        # Drop old tables if they exist
-        cursor.execute("DROP TABLE IF EXISTS vital_signs")
-        cursor.execute("DROP TABLE IF EXISTS heart_results")
-        
-        # Create new unified vital_results table
+
+        # Create vital_results table
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS vital_results (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -100,6 +98,45 @@ def get_user_profile(user_id):
             cursor.close()
             connection.close()
     return None
+
+def hash_password(password):
+    """Hash password using SHA-256"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def update_user(user_id, username, email, password, age, weight, height, blood_type, allergies, diseases):
+    """Update user profile information"""
+    connection = create_connection()
+    if connection:
+        cursor = connection.cursor()
+        hashed_password = hash_password(password)
+            
+        # Update user with specific id
+        cursor.execute("""
+        UPDATE users SET username=%s, email=%s, password=%s, age=%s, weight=%s, height=%s, 
+        blood_type=%s, allergies=%s, diseases=%s WHERE id = %s
+        """, (username, email, hashed_password, age, weight, height, blood_type, allergies, diseases, user_id))
+            
+        connection.commit()
+        cursor.close()
+        connection.close()
+        return True
+    return False
+
+def delete_user(user_id):
+    """Delete user account and all associated data"""
+    connection = create_connection()
+    if connection:
+        cursor = connection.cursor()
+        
+        
+        cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+            
+        connection.commit()
+        cursor.close()
+        connection.close()
+        return True
+        
+    return False
 
 def get_latest_vital_results(user_id):
     """Get latest vital results for dashboard"""
@@ -152,7 +189,7 @@ def generate_sample_data(user_id):
         cursor = connection.cursor()
         
         try:
-            # Check if data already exists
+            # Checks if data already exists
             cursor.execute("SELECT COUNT(*) FROM vital_results WHERE user_id = %s", (user_id,))
             count = cursor.fetchone()[0]
             
@@ -314,6 +351,7 @@ def load_dashboard_css():
     }
     
     .metric-card.water {
+        min-height: 460px;
         border-left: 4px solid #262657;
     }
                 
@@ -347,6 +385,18 @@ def load_dashboard_css():
         color: #64748b;
         font-size: 0.8rem;
         margin: 0;
+    }
+    
+    .metric-subtitle.water {
+        color: #64748b;
+        font-size: 1.25rem;
+        margin: 0;
+    }
+    
+    .divider-line {
+        height: 1px;   
+        background: #64748b;  
+        margin: 0.5rem 0;        
     }
     
     /* Profile section */
@@ -393,6 +443,20 @@ def load_dashboard_css():
         font-size: 20px;
         color: #444;
     }
+                
+    /* Form sections for signup */
+    .form-section {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-section h4 {
+        color: #2c3e50;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #4ECDC4;
+        font-weight: 600;
+    }
     
     /* Mobile responsive */
     @media (max-width: 768px) {
@@ -420,7 +484,7 @@ def dashboard_sidebar():
     if 'dashboard_page' not in st.session_state:
         st.session_state.dashboard_page = 'Dashboard'
     
-    # Navigation menu
+   
     nav_items = [
         ("Dashboard",  "Dashboard"),
         ("Heart", "Heart"),
@@ -434,7 +498,7 @@ def dashboard_sidebar():
     
     st.markdown("---")
     
-    # Logout button
+    
     if st.button("Logout", key="logout_btn", use_container_width=True):
         # Clear session state for logout
         for key in list(st.session_state.keys()):
@@ -442,14 +506,117 @@ def dashboard_sidebar():
         st.success("Logged out successfully!")
         st.rerun()
 
+def show_edit_profile_form(user_data):
+    """Show edit profile form with current user data"""
+    username, email, age, weight, height, blood_type, allergies, diseases, created_at = user_data
+    
+    st.markdown('<div class="form-section"><h3>Edit Profile</h3></div>', unsafe_allow_html=True)
+    
+    col_form1, col_form2 = st.columns(2)
+    with col_form1:
+        new_username = st.text_input("Name", value=username, placeholder="Full name", key="edit_username")
+        new_password = st.text_input("New Password", type="password", placeholder="Enter new password", key="edit_password")
+    
+    with col_form2:
+        new_email = st.text_input("Email", value=email, placeholder="Email address", key="edit_email")
+        confirm_password = st.text_input("Confirm Password", type="password", placeholder="Confirm new password", key="edit_confirm_password")
+    
+    
+    st.markdown('<div class="form-section"><h4>🏥 Medical Information</h4></div>', unsafe_allow_html=True)
+    
+    col_med1, col_med2 = st.columns(2)
+    with col_med1:
+        new_age = st.number_input("Age", min_value=1, max_value=120, value=int(age) if age else 25, key="edit_age")
+        new_height = st.number_input("Height (cm)", min_value=50, max_value=250, value=int(height) if height else 170, key="edit_height")
+        
+        
+        blood_types = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+        blood_type_index = blood_types.index(blood_type) if blood_type in blood_types else 0
+        new_blood_type = st.selectbox("Blood Type", blood_types, index=blood_type_index, key="edit_blood")
+    
+    with col_med2:
+        new_weight = st.number_input("Weight (kg)", min_value=20, max_value=300, value=int(weight) if weight else 70, key="edit_weight")
+        new_allergies = st.text_input("Allergies", value=allergies if allergies else "", placeholder="Any allergies (optional)", key="edit_allergies")
+        new_diseases = st.text_input("Medical Conditions", value=diseases if diseases else "", placeholder="Any conditions (optional)", key="edit_diseases")
+    
+    col_save, col_cancel = st.columns(2)
+    
+    with col_save:
+        save_button = st.button("Save Changes", key="save_profile_details_button", type="primary")
+    
+    with col_cancel:
+        cancel_button = st.button("Cancel", key="cancel_edit_button")
+    
+    if save_button:
+        if not new_username or not new_email or not new_password:
+            st.error("Please fill in all required fields (Name, Email, Password)")
+            return False
+        
+        if new_password != confirm_password:
+            st.error("Passwords do not match!")
+            return False
+        
+        if len(new_password) < 6:
+            st.error("Password must be at least 6 characters long!")
+            return False
+        
+        # Update user
+        if update_user(st.session_state.user_id, new_username, new_email, new_password, 
+                      new_age, new_weight, new_height, new_blood_type, new_allergies, new_diseases):
+            st.success("Profile updated successfully!")
+            st.session_state.username = new_username
+            st.session_state.edit_mode = False #clears edit mode
+            st.rerun()
+        else:
+            st.error("Failed to update profile. Please try again.")
+        return True
+    
+    if cancel_button:
+        st.session_state.edit_mode = False
+        st.rerun()
+        return False
+    
+    return False
+
+def show_delete_confirmation():
+    confirm_delete = st.checkbox("I understand that this action is irreversible", key="delete_confirmation")
+    
+    col_delete, col_cancel_delete = st.columns(2)
+    
+    with col_delete:
+        delete_confirmed = st.button("Delete My Account", key="confirm_delete_button", disabled=not confirm_delete, type="primary")
+    
+    with col_cancel_delete:
+        cancel_delete = st.button("Cancel", key="cancel_delete_button")
+    
+    if delete_confirmed and confirm_delete:
+        if delete_user(st.session_state.user_id):
+            st.success("Account deleted successfully!")
+            # Clear all session state
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
+        else:
+            st.error("Failed to delete account. Please try again.")
+    
+    if cancel_delete:
+        st.session_state.delete_mode = False
+        st.rerun()
+
 def dashboard_main():
     """Main dashboard content"""
-    # Ensure user is logged in
+    # ensures user is logged in (have to log in to access dashboard)
     if 'user_id' not in st.session_state or 'username' not in st.session_state:
         st.error("Please log in to access the dashboard")
         return
     
-    # Generate sample data for demo
+    # initialize edit and delete modes
+    if 'edit_mode' not in st.session_state:
+        st.session_state.edit_mode = False
+    if 'delete_mode' not in st.session_state:
+        st.session_state.delete_mode = False
+    
+    # sample data 
     generate_sample_data(st.session_state.user_id)
     
     # Get latest vital results
@@ -536,8 +703,9 @@ def dashboard_main():
                 <div class="metric-icon">🥛</div>
                 <h3 class="metric-title">Water Balance</h3>
             </div>
-            <div class="metric-value"><small> you have had</small> {water_balance} <small>glasses of water today!</small></div>
-            <p class="metric-subtitle">Drinking enough water boosts your energy and helps your heart stay healthy!</p>
+            <div class="metric-value"><small> You have had</small> {water_balance} <small>glasses of water today!</small></div>
+            <div class="divider-line"></div>
+            <p class="metric-subtitle water">Drinking enough water boosts your energy, keeps your brain sharp, helps your heart stay healthy, and makes your body feel fresh all day!</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -546,30 +714,47 @@ def dashboard_main():
         user=get_user_profile(st.session_state.user_id)
 
         if user:
-            username, email, age, weight, height, blood_type, allergies, diseases, created_at= user
-            # Blood pressure chart
-            st.markdown(f"""
-            <div class="profile-section">
-                <div class="profile-header">
-                    <h3 class="profile-title">👤 Profile</h3>
+            # Check if we're in edit or delete mode
+            if st.session_state.edit_mode:
+                show_edit_profile_form(user)
+            elif st.session_state.delete_mode:
+                show_delete_confirmation()
+            else:
+                username, email, age, weight, height, blood_type, allergies, diseases, created_at = user
+                
+                # Normal profile display
+                st.markdown(f"""
+                <div class="profile-section">
+                    <div class="profile-header">
+                        <h3 class="profile-title">👤 Profile</h3>
+                    </div>
+                    <div class="profile-details">
+                            <p><b>Patient Name:</b> {username}</p>
+                            <p><b>Email:</b> {email}</p>
+                            <p><b>Age:</b> {age}</p>  
+                            <p><b>Weight:</b> {weight}</p>
+                            <p><b>Height:</b> {height}</p>
+                            <p><b>Blood type:</b> {blood_type}</p>
+                            <p><b>Allergies:</b> {allergies if allergies else 'None'}</p>
+                            <p><b>Diseases:</b> {diseases if diseases else 'None'}</p>
+                    </div>
                 </div>
-                <div class="profile-details">
-                        <p><b>Patient Name:</b> {username}</p>
-                        <p><b>Email:</b> {email}</p>
-                        <p><b>Age:</b> {age}</p>  
-                        <p><b>Weight:</b> {weight}</p>
-                        <p><b>Height:</b> {height}</p>
-                        <p><b>Blood type:</b> {blood_type}</p>
-                        <p><b>Allergies:</b> {allergies}</p>
-                        <p><b>Diseases:</b> {diseases}</p>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+                
+                st.markdown("---")
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if st.button("Edit Profile", key="edit_profile_button", type="primary"):
+                        st.session_state.edit_mode = True
+                        st.rerun()
+                
+                with col2:
+                    if st.button("Delete Account", key="delete_account_button", type="secondary"):
+                        st.session_state.delete_mode = True
+                        st.rerun()
         
         
-        
-        
-
 
 
 def run_dashboard():

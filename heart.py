@@ -8,7 +8,7 @@ import plotly.express as px #type: ignore
 import random
 import numpy as np #type: ignore
 
-# Database configuration
+
 DB_CONFIG = {
     'host': 'localhost',
     'database': 'vital_signs_db',
@@ -31,7 +31,7 @@ def create_vital_results_table():
     if connection:
         cursor = connection.cursor()
         
-        # Create unified vital_results table
+        # Create vital_results table
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS vital_results (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -145,6 +145,70 @@ def save_heart_results(user_id, blood_status, heart_rate, systolic_bp, diastolic
             connection.close()
     return False
 
+def get_vital_record_by_date(user_id, date_recorded):
+    """Get vital record for a specific date"""
+    connection = create_connection()
+    if connection:
+        cursor = connection.cursor()
+        try:
+            cursor.execute("""
+            SELECT id, blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, 
+            water_balance, temperature, date_recorded
+            FROM vital_results 
+            WHERE user_id = %s AND date_recorded = %s
+            LIMIT 1
+            """, (user_id, date_recorded))
+            
+            result = cursor.fetchone()
+            cursor.close()
+            connection.close()
+            return result
+        except Error as e:
+            st.error(f"Error fetching vital record: {e}")
+            cursor.close()
+            connection.close()
+    return None
+
+def update_vital_record(record_id, blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, water_balance, temperature):
+    """Update vital record"""
+    connection = create_connection()
+    if connection:
+        cursor = connection.cursor()
+        try:
+            cursor.execute("""
+            UPDATE vital_results SET blood_status=%s, heart_rate=%s, systolic_bp=%s, 
+            diastolic_bp=%s, glucose_level=%s, water_balance=%s, temperature=%s
+            WHERE id = %s
+            """, (blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, 
+                 water_balance, temperature, record_id))
+            
+            connection.commit()
+            cursor.close()
+            connection.close()
+            return True
+        except Error as e:
+            st.error(f"Error updating vital record: {e}")
+            cursor.close()
+            connection.close()
+    return False
+
+def delete_vital_record(record_id):
+    """Delete vital record"""
+    connection = create_connection()
+    if connection:
+        cursor = connection.cursor()
+        try:
+            cursor.execute("DELETE FROM vital_results WHERE id = %s", (record_id,))
+            connection.commit()
+            cursor.close()
+            connection.close()
+            return True
+        except Error as e:
+            st.error(f"Error deleting vital record: {e}")
+            cursor.close()
+            connection.close()
+    return False
+
 def generate_heart_sample_data(user_id):
     """Generate sample heart data for demo"""
     connection = create_connection()
@@ -152,12 +216,11 @@ def generate_heart_sample_data(user_id):
         cursor = connection.cursor()
         
         try:
-            # Check if vital results data exists
+            # Checks if vital_results  exists
             cursor.execute("SELECT COUNT(*) FROM vital_results WHERE user_id = %s", (user_id,))
             results_count = cursor.fetchone()[0]
             
             if results_count == 0:
-                # Generate sample results data
                 for i in range(4):
                     date_record = date.today() - timedelta(days=3-i)
                     systolic = random.randint(110, 130)
@@ -252,7 +315,8 @@ def load_heart_css():
         border-left: 4px solid #06b6d4;
     }
                 
-    .metric-card.water {
+    .metric-card.waterbalance {
+        min-height: 100px;
         border-left: 4px solid #262657;
     }
                 
@@ -335,98 +399,11 @@ def load_heart_css():
     }
 
                 
-
-    .body-image-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 2rem;
-        background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-        border-radius: 16px;
-        margin-bottom: 2rem;
-    }
-    
-    .body-image {
-        max-width: 250px;
-        width: 100%;
-        height: auto;
-    }
     
     
     
-    .heart-metric-card {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid #e2e8f0;
-        transition: transform 0.2s ease;
-    }
-    
-    .heart-metric-card:hover {
-        transform: translateY(-2px);
-    }
     
     
-    
-    .history-card {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid #e2e8f0;
-        margin-bottom: 1rem;
-    }
-    
-    .history-date {
-        color: #6b7280;
-        font-size: 0.9rem;
-        font-weight: 500;
-        margin-bottom: 1rem;
-    }
-    
-    .diagnosis-form {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 2rem;
-        border: 1px solid #e2e8f0;
-    }
-    
-    .form-section-title {
-        color: #1e293b;
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin: 2rem 0 1rem 0;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #4ECDC4;
-    }
-    
-    /* Style the input fields directly */
-    .stTextInput > div > div > input,
-    .stNumberInput > div > div > input {
-        background: #f8fafc !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 8px !important;
-        padding: 12px 16px !important;
-    }
-    
-    .submit-button {
-        background: linear-gradient(135deg, #1F5675, #44A08D) !important;
-        color: white !important;
-        border: none !important;
-        padding: 12px 32px !important;
-        border-radius: 25px !important;
-        font-size: 1rem !important;
-        font-weight: 600 !important;
-        width: 100% !important;
-        box-shadow: 0 4px 15px rgba(76, 205, 196, 0.4) !important;
-        transition: all 0.3s ease !important;
-        letter-spacing: 0.5px !important;
-        margin-top: 2rem !important;
-    }
-    
-    .submit-button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px rgba(76, 205, 196, 0.6) !important;
-    }
     
     /* Heart tab navigation buttons */
     .stButton > button {
@@ -486,12 +463,71 @@ def load_heart_css():
     </style>
     """, unsafe_allow_html=True)
 
+def show_edit_vital_form(record_data):
+    """Show edit form for vital record"""
+    record_id, blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, water_balance, temperature, date_recorded = record_data
+    
+    st.markdown("Edit Vital Record")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        new_blood_status = st.text_input("Blood Status", value=blood_status, key="edit_blood_status")
+        new_heart_rate = st.number_input("Heart Rate (BPM)", min_value=40, max_value=200, value=heart_rate, key="edit_heart_rate")
+        new_water_balance = st.number_input("Water Balance", min_value=1, max_value=50, value=water_balance, key="edit_water_balance")
+    
+    with col2:
+        new_systolic_bp = st.number_input("Systolic BP", min_value=80, max_value=200, value=systolic_bp, key="edit_systolic")
+        new_diastolic_bp = st.number_input("Diastolic BP", min_value=40, max_value=120, value=diastolic_bp, key="edit_diastolic")
+        new_glucose_level = st.number_input("Glucose Level", min_value=50, max_value=300, value=glucose_level, key="edit_glucose")
+        new_temperature = st.number_input("Temperature (°C)", min_value=30.0, max_value=45.0, value=float(temperature), step=0.1, key="edit_temperature")
+    
+    col_save, col_cancel = st.columns(2)
+    
+    with col_save:
+        if st.button("Save Changes", key="save_vital_changes", type="primary"):
+            if update_vital_record(record_id, new_blood_status, new_heart_rate, new_systolic_bp, 
+                                 new_diastolic_bp, new_glucose_level, new_water_balance, new_temperature):
+                st.success("Record updated successfully!")
+                st.session_state.edit_vital_mode = False
+                st.rerun()
+            else:
+                st.error("Failed to update record")
+    
+    with col_cancel:
+        if st.button("Cancel", key="cancel_vital_edit"):
+            st.session_state.edit_vital_mode = False
+            st.rerun()
+
+def show_delete_vital_confirmation(record_data):
+    
+    record_id, blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, water_balance, temperature, date_recorded = record_data
+    
+    
+    confirm_delete = st.checkbox("I confirm I want to delete this record", key="delete_vital_confirmation")
+    
+    col_delete, col_cancel = st.columns(2)
+    
+    with col_delete:
+        if st.button("Delete Record", key="confirm_vital_delete", disabled=not confirm_delete, type="primary"):
+            if delete_vital_record(record_id):
+                st.success("Record deleted successfully!")
+                st.session_state.delete_vital_mode = False
+                st.rerun()
+            else:
+                st.error("Failed to delete record")
+    
+    with col_cancel:
+        if st.button("Cancel", key="cancel_vital_delete"):
+            st.session_state.delete_vital_mode = False
+            st.rerun()
+
 def heart_results_tab():
     """Heart Results Tab Content"""
-    # Generate sample data
+    # sample data
     generate_heart_sample_data(st.session_state.user_id)
     
-    # Get latest results
+    # latest results
     results = get_latest_heart_results(st.session_state.user_id)
     
     if results:
@@ -585,7 +621,7 @@ def heart_diagnosis_tab():
                 if save_heart_results(st.session_state.user_id, blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, water_balance, temperature):
                     st.success("✅ Results saved successfully!")
                     st.balloons()
-                    # Refresh to show new data
+                    
                     st.rerun()
                 else:
                     st.error("❌ Failed to save results")
@@ -595,7 +631,16 @@ def heart_diagnosis_tab():
     st.markdown('</div>', unsafe_allow_html=True)
 
 def heart_history_tab():
-    # Get results history
+    """Updated heart history tab with edit and delete functionality"""
+    # Initialize modes
+    if 'edit_vital_mode' not in st.session_state:
+        st.session_state.edit_vital_mode = False
+    if 'delete_vital_mode' not in st.session_state:
+        st.session_state.delete_vital_mode = False
+    if 'selected_vital_date' not in st.session_state:
+        st.session_state.selected_vital_date = None
+
+    
     results_history = get_heart_history(st.session_state.user_id, 30)
     
     if results_history:
@@ -603,103 +648,123 @@ def heart_history_tab():
         
         col1, col2, col3 = st.columns([1, 2, 2])
         with col1:
-            selected_date = st.selectbox("Choose date", date_options, index=0)
-
-        # Filter results for selected date
-        filtered_results = [r for r in results_history if r[5] == selected_date]  # date_recorded is at index 5
-
-        for result in filtered_results:
-            # Unpack all 6 values from the query result
-            blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, date_recorded = result
-            
-            # Calculate blood count range for display
-            blood_count = f"{diastolic_bp}-{systolic_bp}"
-            st.markdown("---")
-
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.markdown(f"""
-                <div class="metric-card blood-status">
-                    <div class="metric-header">
-                        <div class="metric-icon">🩸</div>
-                        <h3 class="metric-title">Blood Status</h3>
-                    </div>
-                    <div class="metric-value">{blood_status}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with col2:
-                st.markdown(f"""
-                <div class="metric-card heart-rate">
-                    <div class="metric-header">
-                        <div class="metric-icon">🫀</div>
-                        <h3 class="metric-title">Heart Rate</h3>
-                    </div>
-                    <div class="metric-value">{heart_rate} BPM</div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-            with col3:
-                st.markdown(f"""
-                <div class="metric-card blood-pressure">
-                    <div class="metric-header">
-                        <div class="metric-icon">🩺</div>
-                        <h3 class="metric-title">Blood Pressure</h3>
-                    </div>
-                    <div class="metric-value">{blood_count} BPM</div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-            with col4:
-                st.markdown(f"""
-                <div class="metric-card glucose-level">
-                    <div class="metric-header">
-                        <div class="metric-icon">💉</div>
-                        <h3 class="metric-title">Glucose Level</h3>
-                    </div>
-                    <div class="metric-value">{glucose_level} mg/dL</div>
-                </div>
-                """, unsafe_allow_html=True)
+            selected_date = st.selectbox("Choose date", date_options, index=0, key="history_date_select")
+            st.session_state.selected_vital_date = selected_date
         
+        # complete record for selected date
+        vital_record = get_vital_record_by_date(st.session_state.user_id, selected_date)
+        
+        # Show edit or delete forms if in those modes
+        if st.session_state.edit_vital_mode and vital_record:
+            show_edit_vital_form(vital_record)
+        elif st.session_state.delete_vital_mode and vital_record:
+            show_delete_vital_confirmation(vital_record)
+        else:
+            # Normal display mode
+            # Filter results for selected date
+            filtered_results = [r for r in results_history if r[5] == selected_date]
+
+            for result in filtered_results:
+                blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, date_recorded = result
+                blood_count = f"{diastolic_bp}-{systolic_bp}"
+                st.markdown("---")
+
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.markdown(f"""
+                    <div class="metric-card blood-status">
+                        <div class="metric-header">
+                            <div class="metric-icon">🩸</div>
+                            <h3 class="metric-title">Blood Status</h3>
+                        </div>
+                        <div class="metric-value">{blood_status}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                with col2:
+                    st.markdown(f"""
+                    <div class="metric-card heart-rate">
+                        <div class="metric-header">
+                            <div class="metric-icon">🫀</div>
+                            <h3 class="metric-title">Heart Rate</h3>
+                        </div>
+                        <div class="metric-value">{heart_rate} BPM</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                with col3:
+                    st.markdown(f"""
+                    <div class="metric-card blood-pressure">
+                        <div class="metric-header">
+                            <div class="metric-icon">🩺</div>
+                            <h3 class="metric-title">Blood Pressure</h3>
+                        </div>
+                        <div class="metric-value">{blood_count} BPM</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                with col4:
+                    st.markdown(f"""
+                    <div class="metric-card glucose-level">
+                        <div class="metric-header">
+                            <div class="metric-icon">💉</div>
+                            <h3 class="metric-title">Glucose Level</h3>
+                        </div>
+                        <div class="metric-value">{glucose_level} mg/dL</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+                st.markdown("---")
+                
+                
+                temp_water_result = get_complete_vital_record(st.session_state.user_id, date_recorded)
+                
+                if temp_water_result:
+                    temperature, water_balance = temp_water_result
+                else:
+                    temperature, water_balance = 36.8, 3
+                
+                temp, water = st.columns(2)
+                with temp:
+                    st.markdown(f"""
+                    <div class="metric-card temperature">
+                        <div class="metric-header">
+                            <div class="metric-icon">🌡️</div>
+                            <h3 class="metric-title">Temperature</h3>
+                        </div>
+                        <div class="metric-value">{temperature}°C</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with water:
+                    st.markdown(f"""
+                    <div class="metric-card waterbalance">
+                        <div class="metric-header">
+                            <div class="metric-icon">🥛</div>
+                            <h3 class="metric-title">Water Balance</h3>
+                        </div>
+                        <div class="metric-value"><small>you have had</small> {water_balance} <small>glasses of water today!</small></div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            # Edit and Delete buttons
             st.markdown("---")
+            col_edit, col_delete = st.columns(2)
             
-            # Now we need to get temperature and water_balance from the database
-            # Get the complete record for this date
-            temp_water_result = get_complete_vital_record(st.session_state.user_id, date_recorded)
+            with col_edit:
+                if st.button("Edit Record", key="edit_vital_record", type="primary"):
+                    st.session_state.edit_vital_mode = True
+                    st.rerun()
             
-            if temp_water_result:
-                temperature, water_balance = temp_water_result
-            else:
-                # Default values if not found
-                temperature, water_balance = 36.8, 3
-            
-            temp, water = st.columns(2)
-            with temp:
-                st.markdown(f"""
-                <div class="metric-card temperature">
-                    <div class="metric-header">
-                        <div class="metric-icon">🌡️</div>
-                        <h3 class="metric-title">Temperature</h3>
-                    </div>
-                    <div class="metric-value">{temperature}°C</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with water:
-                st.markdown(f"""
-                <div class="metric-card water">
-                    <div class="metric-header">
-                        <div class="metric-icon">🥛</div>
-                        <h3 class="metric-title">Water Balance</h3>
-                    </div>
-                    <div class="metric-value"><small>you have had</small> {water_balance} <small>glasses of water today!</small></div>
-                </div>
-                """, unsafe_allow_html=True)
+            with col_delete:
+                if st.button("Delete Record", key="delete_vital_record", type="secondary"):
+                    st.session_state.delete_vital_mode = True
+                    st.rerun()
 
     else:
         st.info("No results history found.")
     
-    st.markdown("---") 
+    st.markdown("---")
 
 
 def run_heart_page():

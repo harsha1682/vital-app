@@ -122,7 +122,7 @@ def load_medical_css():
     .stDeployButton {
         display: none;
     }
-    
+                
     /* Main container */
     .login-main-container {
         display: flex;

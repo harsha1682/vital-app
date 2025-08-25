@@ -188,18 +188,7 @@ def load_dashboard_css():
     <style>
     
     
-    /* Hide Streamlit default elements */
-    .main > div {
-        padding-top: 2rem;
-    }
     
-    header[data-testid="stHeader"] {
-        display: none;
-    }
-    
-    .stDeployButton {
-        display: none;
-    }
     
     /* Main dashboard background */
     .stApp {
@@ -212,6 +201,10 @@ def load_dashboard_css():
         border-right: 1px solid #e2e8f0;
     }
     
+    /* Deploy Bar Color */
+    .e3g0k5y2 {
+        background: #f8fafc;
+    }
     
     /* Navigation items */
     .nav-item {

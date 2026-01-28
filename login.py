@@ -4,8 +4,6 @@ from mysql.connector import Error #type: ignore
 import hashlib
 import base64
 import time
-import sys
-import os
 
 
 
@@ -429,8 +427,7 @@ def main():
         except ImportError as e:
             st.error(f"❌ Failed to import dashboard module: {e}")
             st.error("Please ensure dashboard.py is in the same directory as login.py")
-            st.info("Current working directory: " + os.getcwd())
-            st.info("Files in directory: " + str(os.listdir('.')))
+            
         except Exception as e:
             st.error(f"❌ Error loading dashboard: {e}")
             import traceback

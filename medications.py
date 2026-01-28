@@ -1,10 +1,9 @@
 import streamlit as st #type: ignore
 import mysql.connector #type: ignore
 from mysql.connector import Error #type: ignore
-import pandas as pd #type: ignore
+
 from datetime import datetime, date, timedelta
-import plotly.graph_objects as go #type: ignore
-import plotly.express as px #type: ignore
+
 import random
 import numpy as np #type: ignore
 
@@ -13,7 +12,7 @@ DB_CONFIG = {
     'host': 'localhost',
     'database': 'vital_signs_db',
     'user': 'root',
-    'password': 'H0ney123'
+    'password': '1234'
 }
 
 def create_connection():
@@ -114,35 +113,125 @@ def delete_medication(medication_id):
 
 def load_med_css():
     """Load custom CSS for medications page"""
+    """Load custom CSS for dashboard"""
     st.markdown("""
     <style>
-    /* Metrics grid */
-    .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
+    /* Main dashboard background */
+    .stApp {
+        background: #f8fafc !important;
     }
     
+    /* Global heading colors - make all black */
+    h1, h2, h3, h4, h5, h6,
+    .stSubheader,
+    [data-testid="stSubheader"] {
+        color: black !important;
+    }
+                
+      
+                
+    /* Make input labels black */
+    .stTextInput label,
+    .stNumberInput label,
+    .stSelectbox label,
+    label {
+        color: black !important;
+        font-weight: 500 !important;
+    }
+
+    /* Also target the label text specifically */
+    .stTextInput > label > div,
+    .stNumberInput > label > div,
+    .stSelectbox > label > div {
+        color: black !important;
+    }
+
+    /* Target Streamlit's label spans */
+    [data-testid="stWidgetLabel"] {
+        color: black !important;
+    }
+
+    /* Make sure placeholder text is visible but lighter */
+    .stTextInput input::placeholder,
+    .stNumberInput input::placeholder {
+        color: #64748b !important;
+    }
+                
+    /* Sidebar styling */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #07635b 0%, #0a4d47 100%) !important;
+    }
+    
+    [data-testid="stSidebar"] * {
+        color: white !important;
+    }
+    
+    /* Sidebar buttons */
+    [data-testid="stSidebar"] .stButton > button {
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 50px !important;
+        padding: 12px 20px !important;
+        font-size: 1rem !important;
+        font-weight: 500 !important;
+        width: 100% !important;
+        transition: all 0.3s ease !important;
+        margin: 5px 0 !important;
+    }
+    
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background: rgba(255, 255, 255, 0.2) !important;
+        transform: translateX(5px) !important;
+    }
+    
+    /* Main content buttons - Dashboard, Heart, Medications pages */
+    .main .stButton > button {
+        background: linear-gradient(135deg, #17a2b8, #138496) !important;
+        color: white !important;
+        border: none !important;
+        padding: 12px 24px !important;
+        border-radius: 25px !important;
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3) !important;
+    }
+    
+    .main .stButton > button:hover {
+        background: linear-gradient(135deg, #138496, #117a8b) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4) !important;
+    }
+    
+    /* Deploy Bar Color */
+    .est0q592 {
+        background: #17a2b8 !important;
+    }
+    
+    
+    
+    /* Metrics cards */
     .metric-card {
-        background: white;
-        border-radius: 16px;
-        padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e2e8f0;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        margin-bottom: 20px;
+        background: white !important;
+        border-radius: 16px !important;
+        padding: 1.5rem !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        border: 1px solid #e2e8f0 !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+        margin-bottom: 20px !important;
     }
     
     .metric-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
     }
+    
     
     .metric-card.medication-card {
-        border-left: 4px solid #3b82f6;
+        border-left: 4px solid #3b82f6 !important;
     }
-    
+                
     .metric-header {
         display: flex;
         align-items: center;
@@ -155,76 +244,115 @@ def load_med_css():
     }
     
     .metric-title {
-        color: #1e293b;
-        font-size: 1rem;
-        font-weight: 600;
-        margin: 0;
+        color: #64748b !important;
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        margin: 0 !important;
     }
     
     .metric-value {
-        font-size: 1.2rem;
-        font-weight: 500;
-        color: #64748b;
-        margin: 0.25rem 0;
+        font-size: 1.75rem !important;
+        font-weight: 600 !important;
+        color: #1e293b !important;
+        margin: 0.25rem 0 !important;
     }
+
+    .metric-subtitle {
+        color: #64748b !important;
+        font-size: 0.8rem !important;
+        margin: 0 !important;
+    }
+    
+    
     
     .metric-detail {
-        color: #64748b;
-        font-size: 0.875rem;
-        margin: 0.25rem 0;
+        color: #64748b !important;
+        font-size: 0.875rem !important;
+        margin: 0.25rem 0 !important;
     }
     
-    /* medications box */
-    .med-header {
-        background: white;
-        border-radius: 16px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e2e8f0;
+    .divider-line {
+        height: 1px;   
+        background: #64748b;  
+        margin: 0.5rem 0;        
     }
     
-    .med-section {
+
+    
+    /* Medications/Heart headers */
+    .med-header, .medications-header, .form-header {
+        background: white !important;
+        border-radius: 16px !important;
+        padding: 2rem !important;
+        margin-bottom: 2rem !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+    
+    .med-section, .medications-section, .form-section {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
     }
     
-    .med-text h1 {
-        color: #1e293b;
-        font-size: 2rem;
-        font-weight: 600;
-        margin: 0 0 0.5rem 0;
+    .med-text h1, .medications-text h3, .form-text h3 {
+        color: #1e293b !important;
+        font-size: 2rem !important;
+        font-weight: 600 !important;
+        margin: 0 0 0.5rem 0 !important;
     }
     
-    .med-text p {
-        color: #64748b;
-        font-size: 1rem;
-        margin: 0 0 1rem 0;
+    .med-text p, .medications-text p {
+        color: #64748b !important;
+        font-size: 1rem !important;
+        margin: 0 0 1rem 0 !important;
     }
     
-    .success-message {
-        background-color: #d1fae5;
-        color: #065f46;
-        padding: 0.75rem;
-        border-radius: 8px;
-        margin: 1rem 0;
-        border-left: 4px solid #10b981;
+    /* Input fields styling */
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input,
+    .stSelectbox > div > div > select {
+        border-radius: 8px !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 10px 12px !important;
     }
     
-    .delete-btn {
-        background-color: #ef4444;
-        color: white;
-        border: none;
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        cursor: pointer;
+    .stTextInput > div > div > input:focus,
+    .stNumberInput > div > div > input:focus,
+    .stSelectbox > div > div > select:focus {
+        border-color: #17a2b8 !important;
+        box-shadow: 0 0 0 3px rgba(23, 162, 184, 0.1) !important;
     }
     
-    .emjbblw1 {
-        background-color: #ffffff;
+    /* Tab/Navigation buttons in Heart page */
+    div[data-testid="column"] > div > div > div > div > button {
+        background: #f8fafc !important;
+        color: #64748b !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 25px !important;
+        padding: 12px 24px !important;
+        font-weight: 500 !important;
+        transition: all 0.2s ease !important;
     }
+    
+    div[data-testid="column"] > div > div > div > div > button:hover {
+        background: #17a2b8 !important;
+        color: white !important;
+        border-color: #17a2b8 !important;
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+        .main-content {
+            padding: 0 1rem;
+        }
+        
+        .metrics-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+
     </style>
     """, unsafe_allow_html=True)
 

@@ -1,10 +1,9 @@
 import streamlit as st #type: ignore
 import mysql.connector #type: ignore
 from mysql.connector import Error #type: ignore
-import pandas as pd #type: ignore
+
 from datetime import datetime, date, timedelta
-import plotly.graph_objects as go #type: ignore
-import plotly.express as px #type: ignore
+
 import random
 import numpy as np #type: ignore
 
@@ -13,7 +12,7 @@ DB_CONFIG = {
     'host': 'localhost',
     'database': 'vital_signs_db',
     'user': 'root',
-    'password': 'H0ney123'
+    'password': '1234'
 }
 
 def create_connection():
@@ -248,76 +247,159 @@ def generate_heart_sample_data(user_id):
 
 def load_heart_css():
     """Load custom CSS for heart page"""
+    """Load custom CSS for dashboard"""
     st.markdown("""
     <style>
-    
-    
-    .heart-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 2rem;
+    /* Main dashboard background */
+    .stApp {
+        background: #f8fafc !important;
+    }
+                
+    /* Global heading colors - make all black */
+    h1, h2, h3, h4, h5, h6,
+    .stSubheader,
+    [data-testid="stSubheader"] {
+        color: black !important;
+    }
+                
+    /* Make input labels black */
+    .stTextInput label,
+    .stNumberInput label,
+    .stSelectbox label,
+    label {
+        color: black !important;
+        font-weight: 500 !important;
+    }
+
+    /* Also target the label text specifically */
+    .stTextInput > label > div,
+    .stNumberInput > label > div,
+    .stSelectbox > label > div {
+        color: black !important;
+    }
+
+    /* Target Streamlit's label spans */
+    [data-testid="stWidgetLabel"] {
+        color: black !important;
+    }
+
+    /* Make sure placeholder text is visible but lighter */
+    .stTextInput input::placeholder,
+    .stNumberInput input::placeholder {
+        color: #64748b !important;
+    }
+                
+    /* Sidebar styling */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #07635b 0%, #0a4d47 100%) !important;
     }
     
-    .heart-icon {
-        font-size: 2rem;
-        margin-right: 1rem;
-        color: #ef4444;
+    [data-testid="stSidebar"] * {
+        color: white !important;
     }
     
-    .heart-title {
-        color: #1e293b;
-        font-size: 1.5rem;
-        font-weight: 600;
-        margin: 0;
+    /* Sidebar buttons */
+    [data-testid="stSidebar"] .stButton > button {
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 50px !important;
+        padding: 12px 20px !important;
+        font-size: 1rem !important;
+        font-weight: 500 !important;
+        width: 100% !important;
+        transition: all 0.3s ease !important;
+        margin: 5px 0 !important;
+    }
+    
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background: rgba(255, 255, 255, 0.2) !important;
+        transform: translateX(5px) !important;
+    }
+    
+    /* Main content buttons - Dashboard, Heart, Medications pages */
+    .main .stButton > button {
+        background: linear-gradient(135deg, #17a2b8, #138496) !important;
+        color: white !important;
+        border: none !important;
+        padding: 12px 24px !important;
+        border-radius: 10px !important;
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3) !important;
+    }
+    
+    .main .stButton > button:hover {
+        background: linear-gradient(135deg, #138496, #117a8b) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4) !important;
+    }
+    
+    /* Deploy Bar Color */
+    .est0q592 {
+        background: #17a2b8 !important;
     }
     
     
-    /* Metrics grid */
-    .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    
+    /* Metrics cards */
     .metric-card {
-        background: white;
-        border-radius: 16px;
-        padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e2e8f0;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        margin-bottom: 20px;
+        background: white !important;
+        border-radius: 16px !important;
+        padding: 1.5rem !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        border: 1px solid #e2e8f0 !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+        margin-bottom: 20px !important;
+        min-height: 100px !important;
     }
     
     .metric-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-    
-    .metric-card.blood-status {
-        border-left: 4px solid #eab308;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
     }
     
     .metric-card.heart-rate {
-        border-left: 4px solid #06b6d4;
-    }
-    
-    .metric-card.blood-pressure {
-        border-left: 4px solid #8C1007;
-    }
-    
-    .metric-card.glucose-level {
-        border-left: 4px solid #eab308;
+        border-left: 4px solid #ef4444 !important;
+        
     }
     
     .metric-card.temperature {
-        border-left: 4px solid #06b6d4;
+        border-left: 4px solid #06b6d4 !important;
+        
     }
-                
+    
+    .metric-card.blood-pressure {
+        border-left: 4px solid #262657 !important;
+    }
+    
+    .metric-card.glucose {
+        border-left: 4px solid #eab308 !important;
+        
+    }
+    
+    .metric-card.water {
+        border-left: 4px solid #262657 !important;
+    }
+    
+    .metric-card.blood-status {
+        border-left: 4px solid #eab308  !important;
+        
+    }
+    
+    .metric-card.glucose-level {
+        border-left: 4px solid #eab308 !important;
+        
+    }
+    
     .metric-card.waterbalance {
-        min-height: 100px;
-        border-left: 4px solid #262657;
+        min-height: 100px !important;
+        border-left: 4px solid #262657 !important;
+    }
+    
+    .metric-card.medication-card {
+        border-left: 4px solid #3b82f6 !important;
+        
     }
                 
     .metric-header {
@@ -332,137 +414,105 @@ def load_heart_css():
     }
     
     .metric-title {
-        color: #64748b;
-        font-size: 0.5rem;
-        font-weight: 500;
-        margin: 0;
+        color: black !important;
+        font-size: 1.5rem !important;
+        margin: 0 !important;
     }
     
     .metric-value {
-        font-size: 1.75rem;
-        font-weight: 600;
-        color: #1e293b;
-        margin: 0.25rem 0;
-    }
-    
-    
-    /* medications box in history page */
-    .medications-header {
-        background: white;
-        border-radius: 16px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e2e8f0;
-    }
-    
-    .medications-section {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-    }
-    
-    .medications-text h3 {
-        color: #1e293b;
-        font-size: 2rem;
-        font-weight: 600;
-        margin: 0 0 0.5rem 0;
-    }
-    
-    .medications-text p {
-        color: #64748b;
-        font-size: 1rem;
-        margin: 0 0 1rem 0;
-    }
-    
-    
-    /* Form section */
-    .form-header {background: white;
-        border-radius: 16px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e2e8f0;
-    }
-                
-    .form-section {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-    }
-    
-    .form-text h3 {
-        color: #1e293b;
-        font-size: 2rem;
-        font-weight: 600;
-        margin: 0 0 0.5rem 0;
+        font-size: 1.75rem !important;
+        font-weight: 600 !important;
+        color: #1e293b !important;
+        margin: 0.25rem 0 !important;
     }
 
+    .metric-subtitle {
+        color: #64748b !important;
+        font-size: 0.8rem !important;
+        margin: 0 !important;
+    }
+    
+    .metric-subtitle.water {
+        color: #64748b !important;
+        font-size: 1.25rem !important;
+        margin: 0 !important;
+    }
+    
+    .metric-detail {
+        color: #64748b !important;
+        font-size: 0.875rem !important;
+        margin: 0.25rem 0 !important;
+    }
+    
+    .divider-line {
+        height: 1px;   
+        background: #64748b;  
+        margin: 0.5rem 0;        
+    }
+    
+
                 
-    
-    
-    
-    
-    
-    
-    /* Heart tab navigation buttons */
-    .stButton > button {
-        background: #f8fafc !important;           
-        color: #64748b !important;                
-        border: 1px solid #e2e8f0 !important;   
-        padding: 12px 20px !important;
-        border-radius: 8px !important;
-        font-size: 0.9rem !important;
-        font-weight: 500 !important;
-        width: 100% !important;
-        transition: all 0.2s ease !important;
-        margin-bottom: 0.5rem !important;
+    /* Form sections */
+    .form-section {
+        margin-bottom: 1.5rem;
     }
     
-    .stButton > button:hover {
-        background: #e2e8f0 !important;          
-        color: #475569 !important;                
-        border-color: #cbd5e1 !important;        
-        transform: none !important;
-        box-shadow: none !important;
+    .stTextInput > div > div > input:focus,
+    .stNumberInput > div > div > input:focus,
+    .stSelectbox > div > div > select:focus {
+        border-color: #17a2b8 !important;
+        box-shadow: 0 0 0 3px rgba(23, 162, 184, 0.1) !important;
     }
     
-    .stButton > button:focus {
-        background: linear-gradient(135deg, #2196f3 , #44A08D) !important; 
-        color: white !important;                  
-        border-color: #1F5675 !important;         
-        box-shadow: 0 2px 8px rgba(31, 86, 117, 0.3) !important;
-    }
-    
-    /* Override for submit button to maintain original styling */
-    .stButton[data-testid="submit_diagnosis"] > button {
-        background: linear-gradient(135deg, #1F5675, #44A08D) !important;
-        color: white !important;
-        border: none !important;
-        padding: 12px 32px !important;
+    /* Tab/Navigation buttons in Heart page */
+    div[data-testid="column"] > div > div > div > div > button {
+        background: #f8fafc !important;
+        color: #64748b !important;
+        border: 1px solid #e2e8f0 !important;
         border-radius: 25px !important;
-        font-size: 1rem !important;
+        padding: 12px 24px !important;
+        font-weight: 500 !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .form-section h4 {
+        color: #2c3e50 !important;
+        font-size: 1.1rem !important;
+        margin-bottom: 1rem !important;
+        padding-bottom: 0.5rem !important;
+        border-bottom: 2px solid #4ECDC4 !important;
         font-weight: 600 !important;
-        width: 100% !important;
-        box-shadow: 0 4px 15px rgba(76, 205, 196, 0.4) !important;
-        transition: all 0.3s ease !important;
-        letter-spacing: 0.5px !important;
-        margin-top: 2rem !important;
     }
     
-    .stButton[data-testid="submit_diagnosis"] > button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px rgba(76, 205, 196, 0.6) !important;
+    
+    /* Input fields styling */
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input,
+    .stSelectbox > div > div > select {
+        border-radius: 8px !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 10px 12px !important;
     }
     
+    div[data-testid="column"] > div > div > div > div > button:hover {
+        background: #17a2b8 !important;
+        color: white !important;
+        border-color: #17a2b8 !important;
+    }
+    
+    /* Mobile responsive */
     @media (max-width: 768px) {
-        .metric-grid, .symptoms-grid {
+        .main-content {
+            padding: 0 1rem;
+        }
+        
+        .metrics-grid {
             grid-template-columns: 1fr;
         }
     }
     </style>
     """, unsafe_allow_html=True)
-
+    
 def show_edit_vital_form(record_data):
     """Show edit form for vital record"""
     record_id, blood_status, heart_rate, systolic_bp, diastolic_bp, glucose_level, water_balance, temperature, date_recorded = record_data
@@ -539,7 +589,6 @@ def heart_results_tab():
         blood_count = f"{diastolic_bp}-{systolic_bp}"
     
     
-
     col1, col2 = st.columns([1, 2])
     
     with col1:
@@ -547,8 +596,8 @@ def heart_results_tab():
         st.image("heartimage.png", width=450)
     
     with col2:
-        st.title("Heart Health Monitor")
-        heart1, heart2=st.columns(2, gap="small")
+        
+        heart1, heart2=st.columns(2)
         # Metrics grid
 
         with heart1:

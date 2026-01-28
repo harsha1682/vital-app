@@ -4,14 +4,16 @@ from mysql.connector import Error #type: ignore
 import hashlib
 import base64
 import time
+import sys
+import os
 
-from pathlib import Path
+
 
 DB_CONFIG = {
     'host': 'localhost',
     'database': 'vital_signs_db',
     'user': 'root',
-    'password': 'H0ney123'
+    'password': '1234'
 }
 
 
@@ -111,23 +113,22 @@ def login_user(email, password):
     return False
 
 
-
-def get_base64_of_bin_file(background):
-    with open(background, "rb") as f:
-        return base64.b64encode(f.read()).decode()
-
-bg_image = get_base64_of_bin_file("bg.png")
-
-
-st.markdown(f"""
-    <style>
-    .stApp {{
-        background: url("data:image/png;base64,{bg_image}") no-repeat center center fixed;
-        background-size: 100% auto;
-    }}
-    </style>
-""", unsafe_allow_html=True)
-
+def set_background_image():
+    """Set background image for login/signup pages"""
+    try:
+        with open("bg.png", "rb") as f:
+            bg_image = base64.b64encode(f.read()).decode()
+        
+        st.markdown(f"""
+            <style>
+            .stApp {{
+                background: url("data:image/png;base64,{bg_image}") no-repeat center center fixed;
+                background-size: 100% auto;
+            }}
+            </style>
+        """, unsafe_allow_html=True)
+    except FileNotFoundError:
+        pass  # Skip if background image not found
 
 
 def load_medical_css():
@@ -135,7 +136,40 @@ def load_medical_css():
     st.markdown("""
     <style>
 
-                
+    /* Global heading colors - make all black */
+    h1, h2, h3, h4, h5, h6,
+    .stSubheader,
+    [data-testid="stSubheader"] {
+        color: black !important;
+    }
+    
+    /* Make input labels black */
+    .stTextInput label,
+    .stNumberInput label,
+    .stSelectbox label,
+    label {
+        color: black !important;
+        font-weight: 500 !important;
+    }
+
+    /* Also target the label text specifically */
+    .stTextInput > label > div,
+    .stNumberInput > label > div,
+    .stSelectbox > label > div {
+        color: black !important;
+    }
+
+    /* Target Streamlit's label spans */
+    [data-testid="stWidgetLabel"] {
+        color: black !important;
+    }
+
+    /* Make sure placeholder text is visible but lighter */
+    .stTextInput input::placeholder,
+    .stNumberInput input::placeholder {
+        color: #64748b !important;
+    }
+                         
     /* Main container */
     .login-main-container {
         display: flex;
@@ -145,7 +179,7 @@ def load_medical_css():
         overflow: hidden;
     }
     
-
+                
     /* Right side with form */
     .form-side {
         flex: 1;
@@ -232,6 +266,10 @@ def load_medical_css():
         box-shadow: 0 6px 20px rgba(76, 205, 196, 0.6) !important;
     }
     
+    /* Deploy Bar Color */
+    .est0q592 {
+        background: #17a2b8 !important;
+    }
     
     
     /* Form sections for signup */
@@ -292,7 +330,6 @@ def login_page():
                         st.success("Login successful! Redirecting...")
                         st.balloons()
                         time.sleep(1)
-                        #rerun app
                         st.rerun()
                     else:
                         st.error("❌ Invalid email or password")
@@ -311,10 +348,11 @@ def login_page():
 
 def signup_page():
     """Signup page UI"""
+    
     col1, col2 = st.columns([1, 1], gap="large")
 
     with col2:
-        
+        st.title("Sign Up")
 
         st.markdown('<div class="form-section"><h4>👤 Basic Information</h4></div>', unsafe_allow_html=True)
         
@@ -372,63 +410,43 @@ def signup_page():
         st.markdown("</div></div>", unsafe_allow_html=True)
 
 
-def show_dashboard_placeholder():
-    """Show dashboard placeholder if dashboard module is not available"""
-    st.success("🎉 Welcome to your HealthCare Dashboard!")
-    st.info("Dashboard is loading... Please make sure dashboard.py is in the same directory.")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric("Heart Rate", "75 BPM", "2 BPM")
-    
-    with col2:
-        st.metric("Blood Pressure", "120/80", "-5 mmHg")
-    
-    with col3:
-        st.metric("Temperature", "36.8°C", "0.2°C")
-    
-    st.markdown("---")
-    
-    if st.button("🚪 Logout", use_container_width=True):
-        # clear session state for logout
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
-
-
-
 def main():
     """Main application"""
+    # Set page config ONCE at the very beginning - BEFORE any other Streamlit commands
     st.set_page_config(
         page_title="HomeCare",
         layout="wide",
         initial_sidebar_state="collapsed"
     )
     
-    
     create_user()
-    # Load custom CSS
-    load_medical_css()
-
     
-if st.session_state.logged_in:
-    try: 
-        import dashboard as dash
-        dash.run_dashboard()
-    except ImportError:
-        show_dashboard_placeholder()
-else:
-
-    st.markdown('<div class="login-main-container">', unsafe_allow_html=True)
-    
-
-    if st.session_state.current_page == 'login':
-        login_page()
+    # If logged in, show dashboard
+    if st.session_state.logged_in:
+        try: 
+            import dashboard
+            dashboard.run_dashboard()
+        except ImportError as e:
+            st.error(f"❌ Failed to import dashboard module: {e}")
+            st.error("Please ensure dashboard.py is in the same directory as login.py")
+            st.info("Current working directory: " + os.getcwd())
+            st.info("Files in directory: " + str(os.listdir('.')))
+        except Exception as e:
+            st.error(f"❌ Error loading dashboard: {e}")
+            import traceback
+            st.code(traceback.format_exc())
     else:
-        signup_page()
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+        # If not logged in, show login/signup pages with background
+        set_background_image()
+        load_medical_css()
+        st.markdown('<div class="login-main-container">', unsafe_allow_html=True)
+        
+        if st.session_state.current_page == 'login':
+            login_page()
+        else:
+            signup_page()
+        
+        st.markdown('</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()

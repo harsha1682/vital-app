@@ -1,10 +1,9 @@
 import streamlit as st #type: ignore
 import mysql.connector #type: ignore
 from mysql.connector import Error #type: ignore
-import pandas as pd #type: ignore
+
 from datetime import datetime, date, timedelta #type: ignore
-import plotly.graph_objects as go #type: ignore
-import plotly.express as px #type: ignore
+
 import random #type: ignore
 import numpy as np #type: ignore
 import hashlib
@@ -19,7 +18,7 @@ DB_CONFIG = {
     'host': 'localhost',
     'database': 'vital_signs_db',
     'user': 'root',
-    'password': 'H0ney123'
+    'password': '1234'
 }
 
 def create_connection():
@@ -223,69 +222,107 @@ def load_dashboard_css():
     """Load custom CSS for dashboard"""
     st.markdown("""
     <style>
-    
-    
-    
-    
     /* Main dashboard background */
     .stApp {
-        background: #f8fafc;
+        background: #f8fafc !important;
+    }
+                
+    /* Global heading colors - make all black */
+    h1, h2, h3, h4, h5, h6,
+    .stSubheader,
+    [data-testid="stSubheader"] {
+        color: black !important;
+    }
+    
+    /* Make input labels black */
+    .stTextInput label,
+    .stNumberInput label,
+    .stSelectbox label,
+    label {
+        color: black !important;
+        font-weight: 500 !important;
+    }
+
+    /* Also target the label text specifically */
+    .stTextInput > label > div,
+    .stNumberInput > label > div,
+    .stSelectbox > label > div {
+        color: black !important;
+    }
+
+    /* Target Streamlit's label spans */
+    [data-testid="stWidgetLabel"] {
+        color: black !important;
+    }
+
+    /* Make sure placeholder text is visible but lighter */
+    .stTextInput input::placeholder,
+    .stNumberInput input::placeholder {
+        color: #64748b !important;
     }
     
     /* Sidebar styling */
-    .e1v5e29v2 {
-        background: #07635b;
-        border-right: 1px solid #e2e8f0;
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #07635b 0%, #0a4d47 100%) !important;
+    }
+    
+    [data-testid="stSidebar"] * {
+        color: white !important;
+    }
+    
+    /* Sidebar buttons */
+    [data-testid="stSidebar"] .stButton > button {
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 50px !important;
+        padding: 12px 20px !important;
+        font-size: 1rem !important;
+        font-weight: 500 !important;
+        width: 100% !important;
+        transition: all 0.3s ease !important;
+        margin: 5px 0 !important;
+    }
+    
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background: rgba(255, 255, 255, 0.2) !important;
+        transform: translateX(5px) !important;
+    }
+    
+    
+    /* Button styling */
+    .stButton > button {
+        background: linear-gradient(135deg, #1F5675, #44A08D) !important;
+        color: white !important;
+        border: none !important;
+        padding: 12px 32px !important;
+        border-radius: 25px !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        width: 100% !important;
+        box-shadow: 0 4px 15px rgba(76, 205, 196, 0.4) !important;
+        transition: all 0.3s ease !important;
+        letter-spacing: 0.5px !important;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(76, 205, 196, 0.6) !important;
     }
     
     /* Deploy Bar Color */
-    .e3g0k5y2 {
-        background: #f8fafc;
+    .est0q592 {
+        background: #17a2b8 !important;
     }
-    
-    /* Navigation items */
-    .nav-item {
-        display: flex;
-        align-items: center;
-        padding: 0.75rem 1rem;
-        margin: 0.25rem 0.5rem;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        color: #64748b;
-        text-decoration: none;
-    }
-    
-    .nav-item:hover {
-        background: #f1f5f9;
-        color: #475569;
-    }
-    
-    .nav-item.active {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-    }
-    
-    .nav-item .nav-icon {
-        margin-right: 12px;
-        font-size: 1.2rem;
-        width: 24px;
-    }
-    
-    /* Main content */
-    .main-content {
-        padding: 0 2rem;
-    }
-                
     
     /* Header section */
     .dashboard-header {
-        background: white;
-        border-radius: 16px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e2e8f0;
+        background: white !important;
+        border-radius: 16px !important;
+        padding: 2rem !important;
+        margin-bottom: 2rem !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        border: 1px solid #e2e8f0 !important;
     }
     
     .welcome-section {
@@ -295,64 +332,77 @@ def load_dashboard_css():
     }
     
     .welcome-text h1 {
-        color: #1e293b;
-        font-size: 2rem;
-        font-weight: 600;
-        margin: 0 0 0.5rem 0;
+        color: #1e293b !important;
+        font-size: 2rem !important;
+        font-weight: 600 !important;
+        margin: 0 0 0.5rem 0 !important;
     }
     
     .welcome-text .username {
-        color: #3b82f6;
-        font-weight: 600;
+        color: #3b82f6 !important;
+        font-weight: 600 !important;
     }
     
     .welcome-text p {
-        color: #64748b;
-        font-size: 1rem;
-        margin: 0 0 1rem 0;
+        color: #64748b !important;
+        font-size: 1rem !important;
+        margin: 0 0 1rem 0 !important;
     }
     
-    /* Metrics grid */
-    .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    
+    /* Metrics cards */
     .metric-card {
-        background: white;
-        border-radius: 16px;
-        padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e2e8f0;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        background: white !important;
+        border-radius: 16px !important;
+        padding: 1.5rem !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        border: 1px solid #e2e8f0 !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+        margin-bottom: 20px !important;
+        min-height: 250px !important;
+        max-height: 250px !important;
     }
     
     .metric-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
     }
     
     .metric-card.heart-rate {
-        border-left: 4px solid #ef4444;
+        border-left: 4px solid #ef4444 !important;
     }
     
     .metric-card.temperature {
-        border-left: 4px solid #06b6d4;
+        border-left: 4px solid #06b6d4 !important;
     }
     
     .metric-card.blood-pressure {
-        border-left: 4px solid #8C1007;
+        border-left: 4px solid #8C1007 !important;
     }
     
     .metric-card.glucose {
-        border-left: 4px solid #eab308;
+        border-left: 4px solid #eab308 !important;
     }
     
     .metric-card.water {
-        min-height: 460px;
-        border-left: 4px solid #262657;
+        min-height: 460px !important;
+        border-left: 4px solid #262657 !important;
+    }
+    
+    .metric-card.blood-status {
+        border-left: 4px solid #eab308 !important;
+    }
+    
+    .metric-card.glucose-level {
+        border-left: 4px solid #eab308 !important;
+    }
+    
+    .metric-card.waterbalance {
+        min-height: 100px !important;
+        border-left: 4px solid #06b6d4 !important;
+    }
+    
+    .metric-card.medication-card {
+        border-left: 4px solid #3b82f6 !important;
     }
                 
     .metric-header {
@@ -367,30 +417,34 @@ def load_dashboard_css():
     }
     
     .metric-title {
-        color: #64748b;
-        font-size: 0.5rem;
-        font-weight: 500;
-        margin: 0;
+        color: black !important;
+        font-size: 1.5rem !important;
+        margin: 0 !important;
     }
     
     .metric-value {
-        font-size: 1.75rem;
-        font-weight: 600;
-        color: #1e293b;
-        margin: 0.25rem 0;
+        font-size: 1.75rem !important;
+        font-weight: 600 !important;
+        color: #1e293b !important;
+        margin: 0.25rem 0 !important;
     }
 
-    
     .metric-subtitle {
-        color: #64748b;
-        font-size: 0.8rem;
-        margin: 0;
+        color: #64748b !important;
+        font-size: 0.8rem !important;
+        margin: 0 !important;
     }
     
     .metric-subtitle.water {
-        color: #64748b;
-        font-size: 1.25rem;
-        margin: 0;
+        color: #64748b !important;
+        font-size: 1.25rem !important;
+        margin: 0 !important;
+    }
+    
+    .metric-detail {
+        color: #64748b !important;
+        font-size: 0.875rem !important;
+        margin: 0.25rem 0 !important;
     }
     
     .divider-line {
@@ -401,16 +455,18 @@ def load_dashboard_css():
     
     /* Profile section */
     .profile-section {
-        background: white;
-        border-radius: 16px;
-        padding: 2rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e2e8f0;
+        background: white !important;
+        border-radius: 16px !important;
+        padding: 2rem !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        border: 1px solid #e2e8f0 !important;
     }
+    
     .profile-icon {
         font-size: 1.5rem;
         margin-right: 8px;
-    }      
+    }
+    
     .profile-header {
         display: flex;
         justify-content: space-between;
@@ -419,53 +475,68 @@ def load_dashboard_css():
     }
                 
     .profile-title {
-        color: #1e293b;
-        font-size; 1.25rem;
-        font-weight: 600;
-        margin: 0;    
+        color: #1e293b !important;
+        font-size: 1.5rem !important;
+        font-weight: 600 !important;
+        margin: 0 !important;
     }
     
     .profile-value {
-        font-size: 1.75rem;
-        font-weight: 600;
-        color: #1e293b;
-        margin: 0.25rem 0;
+        font-size: 1.75rem !important;
+        font-weight: 600 !important;
+        color: #1e293b !important;
+        margin: 0.25rem 0 !important;
     }
     
     .profile-subtitle {
-        color: #64748b;
-        font-size: 0.8rem;
-        margin: 0;
+        color: #64748b !important;
+        font-size: 0.8rem !important;
+        margin: 0 !important;
     }
     
     .profile-details p {
-        margin: 6px 0;
-        font-size: 20px;
-        color: #444;
+        margin: 6px 0 !important;
+        font-size: 20px !important;
+        color: #444 !important;
     }
                 
-    /* Form sections for signup */
+    /* Form sections */
     .form-section {
         margin-bottom: 1.5rem;
     }
     
     .form-section h4 {
-        color: #2c3e50;
-        font-size: 1.1rem;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #4ECDC4;
-        font-weight: 600;
+        color: #2c3e50 !important;
+        font-size: 1.1rem !important;
+        margin-bottom: 1rem !important;
+        padding-bottom: 0.5rem !important;
+        border-bottom: 2px solid #4ECDC4 !important;
+        font-weight: 600 !important;
     }
+    
+
+    /* Input fields styling */
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input,
+    .stSelectbox > div > div > select {
+        border-radius: 8px !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 10px 12px !important;
+    }
+    
+    .stTextInput > div > div > input:focus,
+    .stNumberInput > div > div > input:focus,
+    .stSelectbox > div > div > select:focus {
+        border-color: #17a2b8 !important;
+        box-shadow: 0 0 0 3px rgba(23, 162, 184, 0.1) !important;
+    }
+    
+    
     
     /* Mobile responsive */
     @media (max-width: 768px) {
         .main-content {
             padding: 0 1rem;
-        }
-        
-        .bottom-section {
-            grid-template-columns: 1fr;
         }
         
         .metrics-grid {
@@ -755,17 +826,8 @@ def dashboard_main():
                         st.rerun()
         
         
-
-
 def run_dashboard():
     """Main function to run the dashboard"""
-    st.set_page_config(
-        page_title="Dashboard",
-        page_icon="🏥",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-    
     # Check if user is logged in
     if 'logged_in' not in st.session_state or not st.session_state.logged_in:
         st.error("Please log in to access the dashboard")
@@ -795,7 +857,3 @@ def run_dashboard():
     elif st.session_state.dashboard_page == "Medications":
         import medications as med
         med.run_med_page()
-
-# If running this file directly
-if __name__ == "__main__":
-    run_dashboard()
